@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $APP_NAME-node-1-sandbox
+  namespace: chain-sandbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: $APP_NAME-node-1-sandbox
+  template:
+    metadata:
+      labels:
+        app: $APP_NAME-node-1-sandbox
+    spec:
+      containers:
+        - name: $APP_NAME-node-1-sandbox
+          command: [ "/bin/bash" ]
+          args: [ "-c","useradd -s /sbin/nologin -M nginx;service nginx restart;./target/release/vmchain   --base-path /data/blocks/dev/wnode1   --chain config/test-customSpecRaw.json    --port 30333   --ws-port 9944   --rpc-port 9933  --validator   --name node1    --bootnodes /dns4/vmchain-final-dev-node-0-sandbox.chain-sandbox.svc.cluster.local/tcp/30333/p2p/12D3KooWB6bcZYvH4iRih9HndMGsSYdVMA1xjN1gJyq6ifYxprYN  --target-gas-price 100000  --rpc-cors all  --ws-external --rpc-external   --rpc-methods=Unsafe --execution wasm" ]
+          image:  $REGISTRY/$APP_NAME:SNAPSHOT-$BUILD_NUMBER
+          resources:
+            requests:
+              cpu: 0.1
+              memory: 0.5Gi
+            limits:
+              cpu: 2
+              memory: 1Gi
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+            - name: data
+              mountPath: /data/blocks
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9900
+            - containerPort: 9934
+            - containerPort: 30333
+          env:
+            - name: "spring.profiles.active"
+              value: "test"
+            - name: TZ
+              value: GMT
+            - name: RUST_LOG
+              value: pallet_evm=debug,pallet_ethereum=debug
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+        - name: data
+          persistentVolumeClaim:
+            claimName: vmchain-ssd-pvc
+      imagePullSecrets:
+        - name: regcred
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - $APP_NAME-node-0-sandbox
+                      - $APP_NAME-node-1-sandbox
+                      - $APP_NAME-node-2-sandbox
+              topologyKey: "kubernetes.io/hostname"
+  strategy:
+    type: Recreate

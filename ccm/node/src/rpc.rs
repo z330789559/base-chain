@@ -7,7 +7,7 @@ use fc_rpc::{
 	SchemaV2Override, StorageOverride,
 };
 use fc_rpc_core::types::FilterPool;
-use frontier_template_runtime::{opaque::Block, AccountId, Balance, Hash, Index};
+use ccm_runtime::{opaque::Block, AccountId, Balance, Hash, Index};
 use jsonrpc_pubsub::manager::SubscriptionManager;
 use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
@@ -143,7 +143,7 @@ where
 		client.clone(),
 		pool.clone(),
 		graph,
-		frontier_template_runtime::TransactionConverter,
+		ccm_runtime::TransactionConverter,
 		network.clone(),
 		signers,
 		overrides.clone(),

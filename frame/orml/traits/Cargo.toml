@@ -1,0 +1,36 @@
+[package]
+name = "orml-traits"
+description = "Shared traits including `BasicCurrency`, `MultiCurrency`, `Auction` and more."
+repository = ""
+license = "Apache-2.0"
+version = "0.4.1-dev"
+authors = ["kevin.li"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+sp-runtime = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
+sp-io = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false ,features=["disable_panic_handler","disable_oom"]}
+sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+impl-trait-for-tuples = "0.2.1"
+scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
+frame-support ={ version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
+#orml-utilities = { path = "../utilities", version = "0.4.1-dev", default-features = false }
+# xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"scale-info/std",
+	"serde",
+	"codec/std",
+	"sp-runtime/std",
+	"sp-io/std",
+	"sp-std/std",
+	"num-traits/std",
+	"frame-support/std",
+	#"orml-utilities/std",
+	# "xcm/std",
+]

@@ -1,13 +1,16 @@
-use frontier_template_runtime::{
-	AccountId, AuraConfig, BalancesConfig, EVMConfig, EthereumConfig, GenesisConfig, GrandpaConfig,
+use ccm_runtime::{
+	AccountId, AuraConfig, BalancesConfig, EVMConfig, EthereumConfig, CouncilConfig,GenesisConfig, GrandpaConfig,
 	Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
+use serde_json::json;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{sr25519, Pair, Public, H160, U256};
+use sp_core::{sr25519, Pair, Public, H160, U256,crypto::UncheckedInto};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::{collections::BTreeMap, str::FromStr};
+use std::convert::{TryInto, TryFrom};
+use hex_literal::hex;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -52,13 +55,28 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
 				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a")
+					.unwrap(),
 				// Pre-funded accounts
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					AccountId::from_str("0x69aA70Bd59d22FF13cB1FE90b66EBf474b4a5D32")
+						.unwrap(),
+					AccountId::from_str("0x8c6ca6d78EC4bDb6ce3b58B4BB788323263b7eFD")
+						.unwrap(),
+					AccountId::from_str("0x910D0F22f29bA12ff15E7A2aB6590944E9c2588D")
+						.unwrap(),
+					AccountId::from_str("0x4d4869b6d69915addA0ff8e6B839b2196b3CEF29")
+						.unwrap(),
+					AccountId::from_str("0x256CD031Bfa21542D6Ea1cA6bfdC987ABC49005d")
+						.unwrap(),
+					AccountId::from_str("0x5f807d760E50fFedb492bcAA3220115d97D95AC6")
+						.unwrap(),
+					AccountId::from_str("0xc1432Db8842742937E8b27475C9a220e63C2cCaD")
+						.unwrap(),
+					AccountId::from_str("0x9f883b12fd0692714c2f28be6c40d3afdb9081d3")
+						.unwrap(),
+					AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a")
+						.unwrap(),
 				],
 				true,
 			)
@@ -68,9 +86,17 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		// Telemetry
 		None,
 		// Protocol ID
-		None,
+		Some("ccm"),
 		// Properties
-		None,
+		Some(
+			json!({
+              "tokenDecimals": 18,
+              "tokenSymbol": "CCM"
+            })
+				.as_object()
+				.expect("Error")
+				.clone(),
+		),
 		// Extensions
 		None,
 	))
@@ -89,26 +115,37 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 			testnet_genesis(
 				wasm_binary,
 				// Initial PoA authorities
-				vec![
-					authority_keys_from_seed("Alice"),
-					authority_keys_from_seed("Bob"),
-				],
+				vec![(hex!["8e63609d78e8b07eff0ad673ece04798df19443ec74fdf7f6157190d0806643d"]
+						  .unchecked_into(),
+					  hex!["8a4d5bfc684ae1b1e48c4cb3f6b8ad663f7b3434513edf91e5243a0b1a279536"]
+						  .unchecked_into()),
+					 ( hex!["e4924c61e4764e8824da0cb3da6a35f789a19b6e8f5fb918aa502f63bc35fe0d"]
+						   .unchecked_into(),
+					   hex!["e94b5c662fe1a20f2f41b02b5a90066b5633fce1ac6e5058cb4d2d52446dc8dc"]
+						   .unchecked_into())],
 				// Sudo account
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a")
+					.unwrap(),
 				// Pre-funded accounts
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					AccountId::from_str("0x69aA70Bd59d22FF13cB1FE90b66EBf474b4a5D32")
+						.unwrap(),
+					AccountId::from_str("0x8c6ca6d78EC4bDb6ce3b58B4BB788323263b7eFD")
+						.unwrap(),
+					AccountId::from_str("0x910D0F22f29bA12ff15E7A2aB6590944E9c2588D")
+						.unwrap(),
+					AccountId::from_str("0x4d4869b6d69915addA0ff8e6B839b2196b3CEF29")
+						.unwrap(),
+					AccountId::from_str("0x256CD031Bfa21542D6Ea1cA6bfdC987ABC49005d")
+						.unwrap(),
+					AccountId::from_str("0x5f807d760E50fFedb492bcAA3220115d97D95AC6")
+						.unwrap(),
+					AccountId::from_str("0xc1432Db8842742937E8b27475C9a220e63C2cCaD")
+						.unwrap(),
+					AccountId::from_str("0x9f883b12fd0692714c2f28be6c40d3afdb9081d3")
+						.unwrap(),
+					AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a")
+						.unwrap(),
 				],
 				true,
 			)
@@ -118,9 +155,17 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		// Telemetry
 		None,
 		// Protocol ID
-		None,
+		Some("ccm"),
 		// Properties
-		None,
+		Some(
+			json!({
+              "tokenDecimals": 18,
+              "tokenSymbol": "CCM"
+            })
+				.as_object()
+				.expect("Error")
+				.clone(),
+		),
 		// Extensions
 		None,
 	))
@@ -161,6 +206,8 @@ fn testnet_genesis(
 			// Assign network admin rights.
 			key: root_key,
 		},
+		council: CouncilConfig::default(),
+		treasury: Default::default(),
 		evm: EVMConfig {
 			accounts: {
 				let mut map = BTreeMap::new();

@@ -3,6 +3,9 @@ members = [
 	"frame/dynamic-fee",
 	"frame/ethereum",
 	"frame/evm",
+#	"frame/nft",
+	"frame/orml/nft",
+	"frame/orml/traits",
 	"frame/evm/precompile/sha3fips",
 	"frame/evm/precompile/simple",
 	"frame/evm/precompile/modexp",
@@ -20,6 +23,6 @@ members = [
 	"primitives/evm",
 	"primitives/rpc",
 	"primitives/self-contained",
-	"template/node",
-	"template/runtime",
+	"ccm/node",
+	"ccm/runtime",
 ]

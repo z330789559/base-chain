@@ -144,7 +144,7 @@ pub mod pallet {
 				let usage = (weight_used - lower) / (upper - lower);
 
 				// 50% block fullness is our threshold.
-				let target = Permill::from_parts(500_000);
+				let target = Permill::from_parts(600_000);
 				if usage > target {
 					// Above target, increase.
 					let coef =
