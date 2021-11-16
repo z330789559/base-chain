@@ -403,7 +403,7 @@ impl<T: Config> Pallet<T> {
 			receipts.push(receipt.clone());
 			Self::logs_bloom(receipt.logs.clone(), &mut logs_bloom);
 		}
-
+         log::info!("{:?}",pallet_evm::Pallet::<T>::find_author());
 		let ommers = Vec::<ethereum::Header>::new();
 		let receipts_root =
 			ethereum::util::ordered_trie_root(receipts.iter().map(|r| rlp::encode(r)));

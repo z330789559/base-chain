@@ -107,11 +107,11 @@ pub struct AssetData<Balance> {
 }
 /// Class info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug,TypeInfo)]
-pub struct ClassInfo<TokenId, AccountId, Data> {
+pub struct ClassInfo<Balance, AccountId, Data> {
     /// Class metadata
     pub metadata: Vec<u8>,
     /// Total issuance for the class
-    pub total_issuance: TokenId,
+    pub total_issuance: Balance,
     /// Class owner
     pub owner: AccountId,
     /// Class Properties
@@ -146,7 +146,7 @@ pub mod module {
     }
 
     pub type ClassInfoOf<T> = ClassInfo<
-        <T as Config>::TokenId,
+		BalanceOf<T>,
         <T as frame_system::Config>::AccountId,
 		ClassData<BalanceOf<T>>
     >;
@@ -168,6 +168,9 @@ pub mod module {
     /// Error for non-fungible-token module.
     #[pallet::error]
     pub enum Error<T> {
+
+         ///No available Issuancenumber
+	     NoAvailableClassIssuance,
         /// No available class ID
         NoAvailableClassId,
         /// No available token ID
@@ -292,6 +295,37 @@ impl<T: Config> Pallet<T> {
 
         Ok(class_id)
     }
+
+
+	pub fn create_native_class(
+		owner: &T::AccountId,
+		metadata: Vec<u8>,
+		total_issuance: BalanceOf<T>
+	) -> Result<T::ClassId, DispatchError> {
+		ensure!(total_issuance > 0,Error::<T>::NoAvailableClassId);
+		let class_id = NextClassId::<T>::try_mutate(|id| -> Result<T::ClassId, DispatchError> {
+			let current_id = *id;
+			*id = id
+				.checked_add(&One::one())
+				.ok_or(Error::<T>::NoAvailableClassId)?;
+			Ok(current_id)
+		})?;
+
+		let info = ClassInfo {
+			metadata,
+			total_issuance: total_issuance,
+			owner: owner.clone(),
+			data: ClassData{
+				deposit: Default::default(),
+				metadata: Default::default(),
+				token_type: TokenType::Transferable,
+				collection_type: CollectionType::Collectable
+			}
+		};
+		Classes::<T>::insert(class_id, info);
+
+		Ok(class_id)
+	}
 
     /// Transfer NFT(non fungible token) from `from` account to `to` account
     pub fn transfer(

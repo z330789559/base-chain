@@ -33,7 +33,7 @@ pub trait EthPubSubApi {
 	type Metadata;
 
 	/// Subscribe to Eth subscription.
-	#[pubsub(subscription = "ccm_subscription", subscribe, name = "ccm_subscribe")]
+	#[pubsub(subscription = "eth_subscription", subscribe, name = "eth_subscribe")]
 	fn subscribe(
 		&self,
 		_: Self::Metadata,
@@ -44,9 +44,9 @@ pub trait EthPubSubApi {
 
 	/// Unsubscribe from existing Eth subscription.
 	#[pubsub(
-		subscription = "ccm_subscription",
+		subscription = "eth_subscription",
 		unsubscribe,
-		name = "ccm_unsubscribe"
+		name = "eth_unsubscribe"
 	)]
 	fn unsubscribe(&self, _: Option<Self::Metadata>, _: SubscriptionId) -> Result<bool>;
 }

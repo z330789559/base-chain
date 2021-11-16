@@ -107,10 +107,10 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 
 	Ok(ChainSpec::from_genesis(
 		// Name
-		"Local Testnet",
+		"ccm Testnet",
 		// ID
-		"local_testnet",
-		ChainType::Local,
+		"ccm_testnet",
+		ChainType::Custom(String::from("ccm")),
 		move || {
 			testnet_genesis(
 				wasm_binary,
@@ -190,7 +190,7 @@ fn testnet_genesis(
 			balances: endowed_accounts
 				.iter()
 				.cloned()
-				.map(|k| (k, 1 << 60))
+				.map(|k| (k, 1 << 70))
 				.collect(),
 		},
 		aura: AuraConfig {
