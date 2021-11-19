@@ -22,7 +22,14 @@
 #![allow(clippy::unused_unit)]
 
 use codec::{Decode, Encode};
-use frame_support::{ensure, pallet_prelude::*, Parameter,traits::{Currency,ReservableCurrency}};
+use frame_support::{
+    ensure,
+    pallet_prelude::*,
+    traits::{Currency, ReservableCurrency},
+    Parameter,
+};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
     traits::{
         AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Zero,
@@ -30,83 +37,80 @@ use sp_runtime::{
     ArithmeticError, DispatchError, DispatchResult, RuntimeDebug,
 };
 use sp_std::vec::Vec;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 
 mod mock;
 mod tests;
 use frame_support::scale_info::TypeInfo;
 
-
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug,TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CollectionType {
-	Collectable,
-	Executable,
+    Collectable,
+    Executable,
 }
 
 impl CollectionType {
-	pub fn is_collectable(&self) -> bool {
-		match *self {
-			CollectionType::Collectable => true,
-			_ => false,
-		}
-	}
+    pub fn is_collectable(&self) -> bool {
+        match *self {
+            CollectionType::Collectable => true,
+            _ => false,
+        }
+    }
 
-	pub fn is_executable(&self) -> bool {
-		match *self {
-			CollectionType::Executable => true,
-			_ => false,
-		}
-	}
+    pub fn is_executable(&self) -> bool {
+        match *self {
+            CollectionType::Executable => true,
+            _ => false,
+        }
+    }
 }
 
 impl Default for CollectionType {
-	fn default() -> Self {
-		CollectionType::Collectable
-	}
+    fn default() -> Self {
+        CollectionType::Collectable
+    }
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug,TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum TokenType {
-	Transferable,
-	BoundToAddress,
+    Transferable,
+    BoundToAddress,
 }
 
 impl TokenType {
-	pub fn is_transferable(&self) -> bool {
-		match *self {
-			TokenType::Transferable => true,
-			_ => false,
-		}
-	}
+    pub fn is_transferable(&self) -> bool {
+        match *self {
+            TokenType::Transferable => true,
+            _ => false,
+        }
+    }
 }
 
 impl Default for TokenType {
-	fn default() -> Self {
-		TokenType::BoundToAddress
-	}
+    fn default() -> Self {
+        TokenType::BoundToAddress
+    }
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq,TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct ClassData<Balance> {
-	pub deposit: Balance,
-	pub metadata: Vec<u8>,
-	pub token_type: TokenType,
-	pub collection_type: CollectionType,
+    pub deposit: Balance,
+    pub metadata: Vec<u8>,
+    pub token_type: TokenType,
+    pub collection_type: CollectionType,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq,TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AssetData<Balance> {
-	pub deposit: Balance,
-	pub name: Vec<u8>,
-	pub description: Vec<u8>,
+    pub deposit: Balance,
+    pub name: Vec<u8>,
+    pub description: Vec<u8>,
 }
 /// Class info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug,TypeInfo)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ClassInfo<Balance, AccountId, Data> {
     /// Class metadata
     pub metadata: Vec<u8>,
@@ -119,7 +123,7 @@ pub struct ClassInfo<Balance, AccountId, Data> {
 }
 
 /// Token info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug,TypeInfo)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct TokenInfo<AccountId, Data> {
     /// Token metadata
     pub metadata: Vec<u8>,
@@ -129,7 +133,7 @@ pub struct TokenInfo<AccountId, Data> {
     pub data: Data,
 }
 pub type BalanceOf<T> =
-<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 pub use module::*;
 
 #[frame_support::pallet]
@@ -138,39 +142,45 @@ pub mod module {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         /// The class ID type
-        type ClassId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        type ClassId: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize;
         /// The token ID type
-        type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+        type TokenId: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize;
     }
 
-    pub type ClassInfoOf<T> = ClassInfo<
-		BalanceOf<T>,
-        <T as frame_system::Config>::AccountId,
-		ClassData<BalanceOf<T>>
-    >;
+    pub type ClassInfoOf<T> =
+        ClassInfo<BalanceOf<T>, <T as frame_system::Config>::AccountId, ClassData<BalanceOf<T>>>;
     pub type TokenInfoOf<T> =
-        TokenInfo<<T as frame_system::Config>::AccountId,AssetData<BalanceOf<T>>>;
+        TokenInfo<<T as frame_system::Config>::AccountId, AssetData<BalanceOf<T>>>;
 
     pub type GenesisTokenData<T> = (
         <T as frame_system::Config>::AccountId, // Token owner
         Vec<u8>,                                // Token metadata
-		AssetData<BalanceOf<T>>,
+        AssetData<BalanceOf<T>>,
     );
     pub type GenesisTokens<T> = (
         <T as frame_system::Config>::AccountId, // Token class owner
         Vec<u8>,                                // Token class metadata
-		ClassData<BalanceOf<T>>,
+        ClassData<BalanceOf<T>>,
         Vec<GenesisTokenData<T>>, // Vector of tokens belonging to this class
     );
 
     /// Error for non-fungible-token module.
     #[pallet::error]
     pub enum Error<T> {
-
-         ///No available Issuancenumber
-	     NoAvailableClassIssuance,
+        ///No available Issuancenumber
+        NoAvailableClassIssuance,
         /// No available class ID
         NoAvailableClassId,
         /// No available token ID
@@ -296,36 +306,36 @@ impl<T: Config> Pallet<T> {
         Ok(class_id)
     }
 
+    pub fn create_native_class(
+        owner: &T::AccountId,
+        metadata: Vec<u8>,
+        total_issuance: BalanceOf<T>,
+        token_type: TokenType,
+    ) -> Result<T::ClassId, DispatchError> {
+        // ensure!(total_issuance > 0.into(),Error::<T>::NoAvailableClassId);
+        let class_id = NextClassId::<T>::try_mutate(|id| -> Result<T::ClassId, DispatchError> {
+            let current_id = *id;
+            *id = id
+                .checked_add(&One::one())
+                .ok_or(Error::<T>::NoAvailableClassId)?;
+            Ok(current_id)
+        })?;
 
-	pub fn create_native_class(
-		owner: &T::AccountId,
-		metadata: Vec<u8>,
-		total_issuance: BalanceOf<T>
-	) -> Result<T::ClassId, DispatchError> {
-		ensure!(total_issuance > 0,Error::<T>::NoAvailableClassId);
-		let class_id = NextClassId::<T>::try_mutate(|id| -> Result<T::ClassId, DispatchError> {
-			let current_id = *id;
-			*id = id
-				.checked_add(&One::one())
-				.ok_or(Error::<T>::NoAvailableClassId)?;
-			Ok(current_id)
-		})?;
+        let info = ClassInfo {
+            metadata,
+            total_issuance: total_issuance,
+            owner: owner.clone(),
+            data: ClassData {
+                deposit: Default::default(),
+                metadata: Default::default(),
+                token_type,
+                collection_type: CollectionType::Collectable,
+            },
+        };
+        Classes::<T>::insert(class_id, info);
 
-		let info = ClassInfo {
-			metadata,
-			total_issuance: total_issuance,
-			owner: owner.clone(),
-			data: ClassData{
-				deposit: Default::default(),
-				metadata: Default::default(),
-				token_type: TokenType::Transferable,
-				collection_type: CollectionType::Collectable
-			}
-		};
-		Classes::<T>::insert(class_id, info);
-
-		Ok(class_id)
-	}
+        Ok(class_id)
+    }
 
     /// Transfer NFT(non fungible token) from `from` account to `to` account
     pub fn transfer(
@@ -355,7 +365,7 @@ impl<T: Config> Pallet<T> {
         owner: &T::AccountId,
         class_id: T::ClassId,
         metadata: Vec<u8>,
-        data:AssetData<BalanceOf<T>>,
+        data: AssetData<BalanceOf<T>>,
     ) -> Result<T::TokenId, DispatchError> {
         NextTokenId::<T>::try_mutate(class_id, |id| -> Result<T::TokenId, DispatchError> {
             let token_id = *id;

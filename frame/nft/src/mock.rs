@@ -2,84 +2,81 @@
 
 use super::*;
 use crate as parami_nft;
-use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{Filter,},
+use frame_support::{construct_runtime, parameter_types, traits::Filter};
+use orml_traits::AssetHandler;
+pub use orml_traits::{Auction, AuctionInfo};
+pub use primitives::{
+    AccountId, AssetId, AuctionId, AuctionItem, AuctionType, Balance, BlockNumber, ItemId, Moment,
 };
-pub use primitives::{AccountId, BlockNumber, Balance, Moment, AssetId, ItemId, AuctionId, AuctionItem, AuctionType};
-pub use orml_traits::{Auction,AuctionInfo};
-use orml_traits::{AssetHandler};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
 };
 
 pub struct NftAssetHandler;
 
 impl AssetHandler<u32> for NftAssetHandler {
-    fn check_item_in_auction(
-        _asset_id: u32,
-    ) -> bool {
+    fn check_item_in_auction(_asset_id: u32) -> bool {
         return false;
     }
 }
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: u64 = 250;
 }
 
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = BaseFilter;
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Call = Call;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type DbWeight = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
-	type OnSetCode = ();
+    type BaseCallFilter = BaseFilter;
+    type Origin = Origin;
+    type Index = u64;
+    type BlockNumber = u64;
+    type Hash = H256;
+    type Call = Call;
+    type Hashing = BlakeTwo256;
+    type AccountId = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type Event = Event;
+    type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
+    type BlockWeights = ();
+    type BlockLength = ();
+    type Version = ();
+    type PalletInfo = PalletInfo;
+    type AccountData = pallet_balances::AccountData<Balance>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 1;
+    pub const ExistentialDeposit: Balance = 1;
 }
 
 impl pallet_balances::Config for Runtime {
-	type Balance = u128;
-	type Event = Event;
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Pallet<Runtime>;
-	type MaxLocks = ();
-	type WeightInfo = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = ();
+    type Balance = u128;
+    type Event = Event;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = frame_system::Pallet<Runtime>;
+    type MaxLocks = ();
+    type WeightInfo = ();
+    type MaxReserves = ();
+    type ReserveIdentifier = ();
 }
 
 parameter_types! {
-	pub const MinimumPeriod: u64 = 5;
+    pub const MinimumPeriod: u64 = 5;
 }
 
 impl pallet_timestamp::Config for Runtime {
-	type Moment = u64;
-	type OnTimestampSet = ();
-	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -125,8 +122,8 @@ impl Config for Runtime {
     type CreateClassDeposit = CreateClassDeposit;
     type CreateAssetDeposit = CreateAssetDeposit;
     type Currency = Balances;
-	type PalletId = NftPalletId;
-	type AssetsHandler = NftAssetHandler;
+    type PalletId = NftPalletId;
+    type AssetsHandler = NftAssetHandler;
     type WeightInfo = ();
 }
 
@@ -153,20 +150,19 @@ impl Filter<Call> for BaseFilter {
     }
 }
 
-
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+    pub enum Runtime where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic
+    {
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Assets: parami_assets::{Pallet, Call, Storage, Event<T>},
-		OrmlNft: orml_nft::{Pallet, Storage},
-		Nft: parami_nft::{Pallet, Call, Event<T>},
-	}
+        OrmlNft: orml_nft::{Pallet, Storage},
+        Nft: parami_nft::{Pallet, Call, Event<T>},
+    }
 );
 
 pub const ALICE: u64 = 1;
@@ -175,27 +171,29 @@ pub const DAVE: u64 = 3;
 
 pub struct ExtBuilder;
 impl Default for ExtBuilder {
-	fn default() -> Self {
-		ExtBuilder
-	}
+    fn default() -> Self {
+        ExtBuilder
+    }
 }
 
 impl ExtBuilder {
-	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut t = frame_system::GenesisConfig::default()
+            .build_storage::<Runtime>()
+            .unwrap();
 
-		pallet_balances::GenesisConfig::<Runtime> {
+        pallet_balances::GenesisConfig::<Runtime> {
             balances: vec![(ALICE, 100000), (BOB, 100000), (DAVE, 1)],
         }
-		.assimilate_storage(&mut t)
-		.unwrap();
+        .assimilate_storage(&mut t)
+        .unwrap();
 
-		let mut ext = sp_io::TestExternalities::new(t);
-		ext.execute_with(|| {
-			System::set_block_number(1);
-		});
-		ext
-	}
+        let mut ext = sp_io::TestExternalities::new(t);
+        ext.execute_with(|| {
+            System::set_block_number(1);
+        });
+        ext
+    }
 }
 
 pub fn last_event() -> Event {

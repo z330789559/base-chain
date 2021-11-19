@@ -23,7 +23,7 @@
 use sp_std::prelude::*;
 use sp_std::vec;
 
-use frame_benchmarking::{account, whitelisted_caller, benchmarks, impl_benchmark_test_suite};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::traits::Get;
 use frame_system::RawOrigin;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup, UniqueSaturatedInto};
@@ -44,6 +44,4 @@ fn dollar(d: u32) -> Balance {
     d.saturating_mul(1_000_000_000_000_000_000)
 }
 
-benchmarks! {
-}
-
+benchmarks! {}
