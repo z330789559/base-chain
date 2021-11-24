@@ -477,6 +477,18 @@ pub mod pallet {
 	pub type MalePenguinEggPool<T: Config> = StorageValue<_,BalanceOf<T>,ValueQuery>;
 
 
+	///待处理的企鹅任务
+	#[pallet::storage]
+	#[pallet::getter(fn pending_task_penguin)]
+	pub type PendingTaskPenguin<T: Config> = StorageMap<_,Twox64Concat, BlockNumberOf<T>,PenguinFarmOf<T>, OptionQuery>;
+
+
+	///待处理的孵化劵任务
+	#[pallet::storage]
+	#[pallet::getter(fn pending_task_incubation)]
+	pub type PendingTaskIncubation<T: Config> = StorageMap<_,Twox64Concat,BlockNumberOf<T>, IncubationCouponOf<T>, OptionQuery>;
+
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub red_penguin: Vec<(AccountIdOf<T>, PenguinConfigOf<T>,usize)>,
@@ -706,6 +718,13 @@ pub mod pallet {
 
 		fn on_initialize(now: T::BlockNumber) -> Weight {
            let current =T::TimeStamp::now().as_secs().saturated_into::<u64>();
+			if PendingTaskPenguin::<T>::get(now).is_some(){
+				Self::process_penguin_task();
+			}
+
+			if PendingTaskIncubation::<T>::get(now).is_some(){
+				Self::process_incubation_task();
+			}
 			let pre= PrevProduceEggTime::<T>::get();
 			if current < pre{
 				return 0 as Weight
@@ -1166,5 +1185,10 @@ impl<T: Config> Pallet<T> {
 		let count=Penguins::<T>::iter_prefix_values(MalePenguinClassId::<T>::get()).map(|_|{1u32}).sum::<u32>();
 		count.into()
 	}
+	pub fn process_penguin_task(){
 
+	}
+	pub fn process_incubation_task(){
+
+	}
 }
