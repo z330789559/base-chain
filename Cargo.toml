@@ -21,6 +21,7 @@ members = [
 	"client/db",
 	"client/mapping-sync",
 	"primitives/consensus",
+	"primitives/primitive",
 	"primitives/evm",
 	"primitives/rpc",
 	"primitives/self-contained",

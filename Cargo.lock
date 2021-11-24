@@ -723,6 +723,7 @@ dependencies = [
  "pallet-ethereum",
  "pallet-evm",
  "pallet-transaction-payment-rpc",
+ "penguin-farm",
  "sc-basic-authorship",
  "sc-cli",
  "sc-client-api",
@@ -792,6 +793,7 @@ dependencies = [
  "pallet-treasury",
  "parity-scale-codec",
  "penguin-farm",
+ "primitive",
  "scale-info",
  "serde",
  "sha3 0.8.2",
@@ -4216,13 +4218,15 @@ dependencies = [
 [[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?rev=ba153b9ae050eda022f002d74d76f98d1e339a81#ba153b9ae050eda022f002d74d76f98d1e339a81"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -4903,9 +4907,13 @@ version = "0.4.1-dev"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log",
  "orml-nft",
  "pallet-assets",
+ "pallet-nft",
+ "pallet-timestamp",
  "parity-scale-codec",
+ "primitive",
  "scale-info",
  "serde",
  "sp-core",
@@ -5090,6 +5098,10 @@ name = "ppv-lite86"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
+
+[[package]]
+name = "primitive"
+version = "0.1.0"
 
 [[package]]
 name = "primitive-types"

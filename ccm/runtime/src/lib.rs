@@ -66,7 +66,7 @@ mod precompiles;
 use precompiles::FrontierPrecompiles;
 
 /// Type of block number.
-pub type BlockNumber = u32;
+
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = ether_singer::EthereumSignature;
@@ -80,7 +80,7 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 pub type AccountIndex = u32;
 
 /// Balance of an account.
-pub type Balance = u128;
+
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -124,24 +124,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
 };
-pub mod currency {
-    use super::*;
-    pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-    pub const CENTS: Balance = DOLLARS / 100; // 10_000_000_000_000_000
-    pub const MILLICENTS: Balance = CENTS / 1000; // 10_000_000_000_000
-    pub const MICROCENTS: Balance = MILLICENTS / 1000; // 10_000_000_000
-}
-
-pub use currency::*;
-
-pub const MILLISECS_PER_BLOCK: u64 = 3000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
+pub use primitive::*;
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -523,8 +506,8 @@ impl pallet_assets::Config for Runtime {
 }
 
 parameter_types! {
-    pub CreateClassDeposit: Balance = 500 * CENTS;
-    pub CreateAssetDeposit: Balance = 100 * CENTS;
+    pub CreateClassDeposit: Balance = 0 * CENTS;
+    pub CreateAssetDeposit: Balance = 0 * CENTS;
      pub const NftPalletId: PalletId = PalletId(*b"par/pnft");
 }
 
@@ -543,15 +526,61 @@ impl orml_nft::Config for Runtime {
     type TokenId = u64;
 }
 
-// parameter_types! {
-//     // NOTE: minimum balance is 1 cent, 0.01 dollar
-//     pub const ExistentialDeposit: Balance = CENTS;
-//     // For weight estimation, we assume that the most locks on an individual account will be 50.
-//     // This number may need to be adjusted in the future if this assumption no longer holds true.
-//     pub const MaxLocks: u32 = 50;
-//     pub const MaxReserves: u32 = 50;
-// }
-// Create the runtime by composing the FRAME pallets that were previously configured.
+
+parameter_types! {
+	pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
+	pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
+	pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
+	pub const SmallYellowPenguinLockPeriod: BlockNumber = 14 * DAYS;
+	pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
+	pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
+	pub const YellowPenguinEggCountForIncubation: Balance =20 * DOLLARS;
+	pub const MalePenguinLifeSpan: BlockNumber= 7 * DAYS;
+	pub const ColdStroage: PalletId = PalletId(*b"par/cold");
+	pub const ClassOwnerId:  PalletId = PalletId(*b"par/cwid");
+	pub const IncubationId:  PalletId = PalletId(*b"par/incu");
+	pub const TechnicalStashId:  PalletId = PalletId(*b"par/tech");
+	pub const OperationStashId:  PalletId = PalletId(*b"par/oper");
+    pub const MalePenguinEggRate: Permill = Permill::from_percent(2);
+    pub const RedPenguinEggRate: Permill = Permill::from_percent(40);
+	pub const YellowPenguinEggRate: Permill = Permill::from_percent(48);
+	pub const TechnicalPenguinEggRate: Permill = Permill::from_percent(5);
+	pub const OperationPenguinEggRate: Permill = Permill::from_percent(5);
+	pub const MalePenguinRate: Permill = Permill::from_percent(1);
+	pub const PenguinProducePeriod: u64 =20u64;
+	pub const YellowPenguinDeadPeriod: u64 =20u64;
+}
+
+impl penguin_farm::Config for Runtime{
+	type ClassId = u32;
+	type TokenId = u64;
+	type Currency = Balances;
+	type AssetId = u32;
+	type IncubationId= IncubationId;
+	type InitTotalSupply = InitTotalSupply;
+	type InitSupplyPeriod = InitSupplyPeriod;
+	type ClassOwnerId =ClassOwnerId ;
+	type ColdStorageId = ColdStroage;
+	type TimeStamp = Timestamp;
+	type MalePenguinEggLimit = MalePenguinEggLimit;
+	type SmallYellowPenguinLockPeriod = SmallYellowPenguinLockPeriod;
+	type SmallYellowPenguinGrowPeriod = SmallYellowPenguinGrowPeriod;
+	type TechnicalStashId = TechnicalStashId;
+	type OperationStashId = OperationStashId;
+	type MalePenguinEggRate = MalePenguinEggRate;
+	type RedPenguinEggRate = RedPenguinEggRate;
+	type YellowPenguinEggRate =YellowPenguinEggRate;
+	type TechnicalPenguinEggRate = TechnicalPenguinEggRate;
+	type OperationPenguinEggRate = OperationPenguinEggRate;
+	type MalePenguinRate = MalePenguinRate;
+	type RedPenguinEggCountForIncubation = RedPenguinEggCountForIncubation;
+	type YellowPenguinEggCountForIncubation = YellowPenguinEggCountForIncubation;
+	type PenguinProducePeriod =PenguinProducePeriod;
+	type YellowPenguinDeadPeriod = YellowPenguinDeadPeriod;
+	type MalePenguinLifeSpan = MalePenguinLifeSpan;
+}
+
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -577,6 +606,7 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent}=17,
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=18,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
+		Farm: penguin_farm::{Pallet, Call, Storage, Config<T>}=20,
 
     }
 );

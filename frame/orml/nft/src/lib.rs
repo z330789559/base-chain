@@ -74,8 +74,8 @@ impl Default for CollectionType {
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum TokenType {
-    Transferable,
-    BoundToAddress,
+    Transferable =0,
+    BoundToAddress =1,
 }
 
 impl TokenType {
@@ -314,11 +314,10 @@ impl<T: Config> Pallet<T> {
     ) -> Result<T::ClassId, DispatchError> {
         // ensure!(total_issuance > 0.into(),Error::<T>::NoAvailableClassId);
         let class_id = NextClassId::<T>::try_mutate(|id| -> Result<T::ClassId, DispatchError> {
-            let current_id = *id;
-            *id = id
+            // let current_id = *id;
+            Ok(id
                 .checked_add(&One::one())
-                .ok_or(Error::<T>::NoAvailableClassId)?;
-            Ok(current_id)
+                .ok_or(Error::<T>::NoAvailableClassId)?)
         })?;
 
         let info = ClassInfo {

@@ -70,6 +70,8 @@ pallet-evm = { path = "../../frame/evm" }
 pallet-ethereum = { path = "../../frame/ethereum" }
 pallet-dynamic-fee = { path = "../../frame/dynamic-fee" }
 pallet-base-fee = { path = "../../frame/base-fee" }
+penguin-farm={path="../../frame/penguin-farm"}
+
 
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
