@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
 #![allow(clippy::clone_double_ref)]
 
 extern crate alloc;

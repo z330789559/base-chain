@@ -74,8 +74,8 @@ impl Default for CollectionType {
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum TokenType {
-    Transferable =0,
-    BoundToAddress =1,
+    Transferable = 0,
+    BoundToAddress = 1,
 }
 
 impl TokenType {

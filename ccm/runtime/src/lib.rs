@@ -25,8 +25,8 @@ use sp_core::{
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
-         BlakeTwo256, Block as BlockT, Dispatchable, IdentifyAccount, NumberFor,
-        PostDispatchInfoOf, Verify,
+        BlakeTwo256, Block as BlockT, Dispatchable, IdentifyAccount, NumberFor, PostDispatchInfoOf,
+        Verify,
     },
     transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
     ApplyExtrinsicResult, Percent,
@@ -67,7 +67,6 @@ use precompiles::FrontierPrecompiles;
 
 /// Type of block number.
 
-
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = ether_singer::EthereumSignature;
 
@@ -80,7 +79,6 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 pub type AccountIndex = u32;
 
 /// Balance of an account.
-
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -526,60 +524,62 @@ impl orml_nft::Config for Runtime {
     type TokenId = u64;
 }
 
-
 parameter_types! {
-	pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
-	pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
-	pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
-	pub const SmallYellowPenguinLockPeriod: BlockNumber = 14 * DAYS;
-	pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
-	pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
-	pub const YellowPenguinEggCountForIncubation: Balance =20 * DOLLARS;
-	pub const MalePenguinLifeSpan: BlockNumber= 7 * DAYS;
-	pub const ColdStroage: PalletId = PalletId(*b"par/cold");
-	pub const ClassOwnerId:  PalletId = PalletId(*b"par/cwid");
-	pub const IncubationId:  PalletId = PalletId(*b"par/incu");
-	pub const TechnicalStashId:  PalletId = PalletId(*b"par/tech");
-	pub const OperationStashId:  PalletId = PalletId(*b"par/oper");
+    pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
+    pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
+    pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
+    pub const SmallYellowPenguinLockPeriod: BlockNumber = 14 * DAYS;
+    pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
+    pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
+    pub const YellowPenguinEggCountForIncubation: Balance =20 * DOLLARS;
+    pub const MalePenguinLifeSpan: BlockNumber= 7 * DAYS;
+    pub const ColdStroage: PalletId = PalletId(*b"par/cold");
+    pub const ClassOwnerId:  PalletId = PalletId(*b"par/cwid");
+    pub const IncubationId:  PalletId = PalletId(*b"par/incu");
+    pub const TechnicalStashId:  PalletId = PalletId(*b"par/tech");
+    pub const OperationStashId:  PalletId = PalletId(*b"par/oper");
     pub const MalePenguinEggRate: Permill = Permill::from_percent(2);
     pub const RedPenguinEggRate: Permill = Permill::from_percent(40);
-	pub const YellowPenguinEggRate: Permill = Permill::from_percent(48);
-	pub const TechnicalPenguinEggRate: Permill = Permill::from_percent(5);
-	pub const OperationPenguinEggRate: Permill = Permill::from_percent(5);
-	pub const MalePenguinRate: Permill = Permill::from_percent(1);
-	pub const PenguinProducePeriod: u64 =20u64;
-	pub const YellowPenguinDeadPeriod: u64 =20u64;
+    pub const YellowPenguinEggRate: Permill = Permill::from_percent(48);
+    pub const TechnicalPenguinEggRate: Permill = Permill::from_percent(5);
+    pub const OperationPenguinEggRate: Permill = Permill::from_percent(5);
+    pub const MalePenguinRate: Permill = Permill::from_percent(1);
+    pub const PenguinProducePeriod: BlockNumber =20 * MILLISECS_PER_BLOCK ;
+    pub const YellowPenguinDeadPeriod: BlockNumber =20 * MILLISECS_PER_BLOCK ;
+    pub const IncubationLivePeriod: BlockNumber = 5 * DAYS;
 }
 
-impl penguin_farm::Config for Runtime{
-	type ClassId = u32;
-	type TokenId = u64;
-	type Currency = Balances;
-	type AssetId = u32;
-	type IncubationId= IncubationId;
-	type InitTotalSupply = InitTotalSupply;
-	type InitSupplyPeriod = InitSupplyPeriod;
-	type ClassOwnerId =ClassOwnerId ;
-	type ColdStorageId = ColdStroage;
-	type TimeStamp = Timestamp;
-	type MalePenguinEggLimit = MalePenguinEggLimit;
-	type SmallYellowPenguinLockPeriod = SmallYellowPenguinLockPeriod;
-	type SmallYellowPenguinGrowPeriod = SmallYellowPenguinGrowPeriod;
-	type TechnicalStashId = TechnicalStashId;
-	type OperationStashId = OperationStashId;
-	type MalePenguinEggRate = MalePenguinEggRate;
-	type RedPenguinEggRate = RedPenguinEggRate;
-	type YellowPenguinEggRate =YellowPenguinEggRate;
-	type TechnicalPenguinEggRate = TechnicalPenguinEggRate;
-	type OperationPenguinEggRate = OperationPenguinEggRate;
-	type MalePenguinRate = MalePenguinRate;
-	type RedPenguinEggCountForIncubation = RedPenguinEggCountForIncubation;
-	type YellowPenguinEggCountForIncubation = YellowPenguinEggCountForIncubation;
-	type PenguinProducePeriod =PenguinProducePeriod;
-	type YellowPenguinDeadPeriod = YellowPenguinDeadPeriod;
-	type MalePenguinLifeSpan = MalePenguinLifeSpan;
+impl penguin_farm::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type AssetId = u32;
+    type ClassId = u32;
+    type TokenId = u64;
+    type InitTotalSupply = InitTotalSupply;
+    type InitSupplyPeriod = InitSupplyPeriod;
+    type ClassOwnerId = ClassOwnerId;
+    type ColdStorageId = ColdStroage;
+    type IncubationId = IncubationId;
+    type TechnicalStashId = TechnicalStashId;
+    type OperationStashId = OperationStashId;
+    type TimeStamp = Timestamp;
+    type MalePenguinEggLimit = MalePenguinEggLimit;
+    type MalePenguinLifeSpan = MalePenguinLifeSpan;
+    type MalePenguinEggRate = MalePenguinEggRate;
+    type RedPenguinEggRate = RedPenguinEggRate;
+    type YellowPenguinEggRate = YellowPenguinEggRate;
+    type TechnicalPenguinEggRate = TechnicalPenguinEggRate;
+    type OperationPenguinEggRate = OperationPenguinEggRate;
+    type MalePenguinRate = MalePenguinRate;
+    type PenguinProducePeriod = PenguinProducePeriod;
+    type YellowPenguinDeadPeriod = YellowPenguinDeadPeriod;
+    type SmallYellowPenguinLockPeriod = SmallYellowPenguinLockPeriod;
+    type SmallYellowPenguinGrowPeriod = SmallYellowPenguinGrowPeriod;
+    type IncubationLivePeriod = IncubationLivePeriod;
+    type RedPenguinEggCountForIncubation = RedPenguinEggCountForIncubation;
+    type YellowPenguinEggCountForIncubation = YellowPenguinEggCountForIncubation;
+    type WeightInfo = ();
 }
-
 
 construct_runtime!(
     pub enum Runtime where
@@ -606,7 +606,7 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent}=17,
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=18,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
-		Farm: penguin_farm::{Pallet, Call, Storage, Config<T>}=20,
+        Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config<T>}=20,
 
     }
 );

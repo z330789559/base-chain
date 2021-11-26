@@ -1,19 +1,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
-pub type BlockNumber = u32;
+pub type BlockNumber = u64;
 pub type Balance = u128;
 pub mod currency {
-	use super::*;
-	pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
-	pub const CENTS: Balance = DOLLARS / 100; // 10_000_000_000_000_000
-pub const MILLICENTS: Balance = CENTS / 1000; // 10_000_000_000_000
-pub const MICROCENTS: Balance = MILLICENTS / 1000; // 10_000_000_000
+    use super::*;
+    pub const DOLLARS: Balance = 1_000_000_000_000_000_000;
+    pub const CENTS: Balance = DOLLARS / 100; // 10_000_000_000_000_000
+    pub const MILLICENTS: Balance = CENTS / 1000; // 10_000_000_000_000
+    pub const MICROCENTS: Balance = MILLICENTS / 1000; // 10_000_000_000
 }
 
 pub use currency::*;
 
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
+pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
@@ -21,5 +20,3 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
-
-

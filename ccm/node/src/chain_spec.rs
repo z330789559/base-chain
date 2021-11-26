@@ -1,8 +1,9 @@
 use ccm_runtime::{
-    AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, GenesisConfig,FarmConfig,
-    GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
+    AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, FarmConfig,
+    GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use hex_literal::hex;
+use penguin_farm::{PenguinConfig, PenguinStatus};
 use sc_service::ChainType;
 use serde_json::json;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -10,7 +11,6 @@ use sp_core::{crypto::UncheckedInto, Pair, Public, H160, U256};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::{collections::BTreeMap, str::FromStr};
-use penguin_farm::{PenguinConfig, PenguinStatus};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -25,7 +25,7 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
         .public()
 }
 
- type AccountPublic = <Signature as Verify>::Signer;
+type AccountPublic = <Signature as Verify>::Signer;
 
 /// Generate an account ID from seed.
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
@@ -231,21 +231,26 @@ fn testnet_genesis(
         ethereum: EthereumConfig {},
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
-		farm: FarmConfig{
-			prev_produce_time:1637662892,
-			red_penguin: vec![(AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),PenguinConfig{
-				owner: AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),
-				start: 0u32,
-				pre_eat_at: 032,
-				status: PenguinStatus::Active,
-				eggs: 100000u128
-			},5000)],
-			yellow_penguin: vec![],
-			small_yellow_penguin: vec![],
-			male_penguin: vec![],
-			init_per_day_supply: 5555555u128,
-			incubation_coupon_asset: vec![],
-			low_incubation_coupon_asset: vec![],
-		}
+        farm: FarmConfig {
+            prev_produce_time: 1637662892,
+            red_penguin: vec![(
+                AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),
+                PenguinConfig {
+                    owner: AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a")
+                        .unwrap(),
+                    start: 064,
+                    pre_eat_at: 0u64,
+                    status: PenguinStatus::Active,
+                    eggs: 100000u128,
+                },
+                8000,
+            )],
+            yellow_penguin: vec![],
+            small_yellow_penguin: vec![],
+            male_penguin: vec![],
+            init_per_day_supply: 5555555u128,
+            incubation_coupon_asset: vec![],
+            low_incubation_coupon_asset: vec![],
+        },
     }
 }

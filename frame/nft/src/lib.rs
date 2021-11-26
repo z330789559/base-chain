@@ -606,131 +606,127 @@ pub mod pallet {
             Ok(())
         }
 
+        pub fn inner_create_class(
+            sender: T::AccountId,
+            metadata: Vec<u8>,
+            token_type: TokenType,
+            collection_type: CollectionType,
+            class_pool_account: T::AccountId,
+        ) -> Result<T::ClassId, sp_runtime::DispatchError> {
+            let next_class_id = OrmlNft::<T>::next_class_id();
 
-		pub fn inner_create_class(
-			sender: T::AccountId,
-			metadata: Vec<u8>,
-			token_type: TokenType,
-			collection_type: CollectionType,
-			class_pool_account: T::AccountId,
-		) -> Result<T::ClassId, sp_runtime::DispatchError> {
-			let next_class_id = OrmlNft::<T>::next_class_id();
+            let class_deposit = T::CreateClassDeposit::get();
+            log::info!("开始交易 {:?}", &class_deposit);
+            if class_deposit > Zero::zero() {
+                <T as orml_nft::Config>::Currency::transfer(
+                    &sender,
+                    &class_pool_account,
+                    class_deposit,
+                    KeepAlive,
+                )?;
+                log::info!("开始质押 {:?}", &class_pool_account);
+                <T as orml_nft::Config>::Currency::reserve(
+                    &class_pool_account,
+                    <T as orml_nft::Config>::Currency::free_balance(&class_pool_account),
+                )?;
+            }
 
-			let class_deposit = T::CreateClassDeposit::get();
-			log::info!("开始交易 {:?}", &class_deposit);
-			if class_deposit >Zero::zero(){
-				<T as orml_nft::Config>::Currency::transfer(
-					&sender,
-					&class_pool_account,
-					class_deposit,
-					KeepAlive,
-				)?;
-				log::info!("开始质押 {:?}", &class_pool_account);
-				<T as orml_nft::Config>::Currency::reserve(
-					&class_pool_account,
-					<T as orml_nft::Config>::Currency::free_balance(&class_pool_account),
-				)?;
-			}
+            let class_data = ClassData {
+                deposit: class_deposit,
+                token_type,
+                collection_type,
+                metadata: metadata.clone(),
+            };
 
-			let class_data = ClassData {
-				deposit: class_deposit,
-				token_type,
-				collection_type,
-				metadata: metadata.clone(),
-			};
+            OrmlNft::<T>::create_class(&sender, metadata, class_data)?;
 
-			OrmlNft::<T>::create_class(&sender, metadata, class_data)?;
+            Self::deposit_event(Event::<T>::NftClassCreated(sender, next_class_id));
 
-			Self::deposit_event(Event::<T>::NftClassCreated(sender, next_class_id));
+            Ok(next_class_id)
+        }
 
-			Ok(next_class_id)
-		}
+        pub fn inner_mint(
+            sender: T::AccountId,
+            class_id: ClassIdOf<T>,
+            name: Vec<u8>,
+            description: Vec<u8>,
+            metadata: Vec<u8>,
+            quantity: u32,
+        ) -> DispatchResultWithPostInfo {
+            ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
+            let class_detail =
+                OrmlNft::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
+            ensure!(sender == class_detail.owner, Error::<T>::NoPermission);
 
-		pub fn inner_mint(
-			sender: T::AccountId,
-			class_id: ClassIdOf<T>,
-			name: Vec<u8>,
-			description: Vec<u8>,
-			metadata: Vec<u8>,
-			quantity: u32,
-		) -> DispatchResultWithPostInfo {
+            let deposit = T::CreateAssetDeposit::get();
+            let class_pool_account: T::AccountId = T::PalletId::get().into_sub_account(class_id);
+            let total_deposit = deposit * Into::<BalanceOf<T>>::into(quantity);
 
-			ensure!(quantity >= 1, Error::<T>::InvalidQuantity);
-			let class_detail =
-				OrmlNft::<T>::classes(class_id).ok_or(Error::<T>::ClassIdNotFound)?;
-			ensure!(sender == class_detail.owner, Error::<T>::NoPermission);
+            let data = class_detail.data;
+            if data.token_type == TokenType::BoundToAddress {
+                ensure!(quantity < 2, Error::<T>::QuantityExceeds);
+            }
 
-			let deposit = T::CreateAssetDeposit::get();
-			let class_pool_account: T::AccountId = T::PalletId::get().into_sub_account(class_id);
-			let total_deposit = deposit * Into::<BalanceOf<T>>::into(quantity);
+            <T as orml_nft::Config>::Currency::transfer(
+                &sender,
+                &class_pool_account,
+                total_deposit,
+                KeepAlive,
+            )?;
+            if deposit > Zero::zero() {
+                <T as orml_nft::Config>::Currency::reserve(&class_pool_account, total_deposit)?;
+            }
 
-			let data = class_detail.data;
-			if data.token_type == TokenType::BoundToAddress {
-				ensure!(quantity < 2, Error::<T>::QuantityExceeds);
-			}
+            let new_nft_data = AssetData {
+                deposit,
+                name: name.clone(),
+                description,
+            };
 
-			<T as orml_nft::Config>::Currency::transfer(
-				&sender,
-				&class_pool_account,
-				total_deposit,
-				KeepAlive,
-			)?;
-			if deposit>Zero::zero(){
-			<T as orml_nft::Config>::Currency::reserve(&class_pool_account, total_deposit)?;
-			}
+            let mut new_asset_ids: Vec<T::AssetId> = Vec::new();
+            let mut last_token_id: TokenIdOf<T> = Default::default();
 
-			let new_nft_data = AssetData {
-				deposit,
-				name: name.clone(),
-				description,
-			};
+            for _ in 0..quantity {
+                let asset_id =
+                    NextAssetId::<T>::try_mutate(|id| -> Result<T::AssetId, DispatchError> {
+                        Ok(id
+                            .checked_add(&(Into::into(1u32)))
+                            .ok_or(Error::<T>::NoAvailableAssetId)?)
+                    })?;
 
-			let mut new_asset_ids: Vec<T::AssetId> = Vec::new();
-			let mut last_token_id: TokenIdOf<T> = Default::default();
+                new_asset_ids.push(asset_id);
 
-			for _ in 0..quantity {
-				let asset_id =
-					NextAssetId::<T>::try_mutate(|id| -> Result<T::AssetId, DispatchError> {
-						Ok(id
-							.checked_add(&(Into::into(1u32)))
-							.ok_or(Error::<T>::NoAvailableAssetId)?)
-
-					})?;
-
-				new_asset_ids.push(asset_id);
-
-				if AssetsByOwner::<T>::contains_key(&sender) {
-					AssetsByOwner::<T>::try_mutate(&sender, |asset_ids| -> DispatchResult {
-						ensure!(
+                if AssetsByOwner::<T>::contains_key(&sender) {
+                    AssetsByOwner::<T>::try_mutate(&sender, |asset_ids| -> DispatchResult {
+                        ensure!(
                             !asset_ids.iter().any(|i| asset_id == *i),
                             Error::<T>::AssetIdAlreadyExists
                         );
-						asset_ids.push(asset_id);
-						Ok(())
-					})?;
-				} else {
-					let mut assets = Vec::<T::AssetId>::new();
-					assets.push(asset_id);
-					AssetsByOwner::<T>::insert(&sender, assets)
-				}
+                        asset_ids.push(asset_id);
+                        Ok(())
+                    })?;
+                } else {
+                    let mut assets = Vec::<T::AssetId>::new();
+                    assets.push(asset_id);
+                    AssetsByOwner::<T>::insert(&sender, assets)
+                }
 
-				let nft_token_id=
-					OrmlNft::<T>::mint(&sender, class_id, metadata.clone(), new_nft_data.clone())?;
-				Assets::<T>::insert(asset_id, (class_id, nft_token_id));
-				last_token_id = nft_token_id;
-			}
+                let nft_token_id =
+                    OrmlNft::<T>::mint(&sender, class_id, metadata.clone(), new_nft_data.clone())?;
+                Assets::<T>::insert(asset_id, (class_id, nft_token_id));
+                last_token_id = nft_token_id;
+            }
 
-			Self::deposit_event(Event::<T>::NftMinted(
-				*new_asset_ids.first().unwrap(),
-				*new_asset_ids.last().unwrap(),
-				sender,
-				class_id,
-				quantity,
-				last_token_id,
-			));
+            Self::deposit_event(Event::<T>::NftMinted(
+                *new_asset_ids.first().unwrap(),
+                *new_asset_ids.last().unwrap(),
+                sender,
+                class_id,
+                quantity,
+                last_token_id,
+            ));
 
-			Ok(().into())
-		}
-
+            Ok(().into())
+        }
     }
 }
