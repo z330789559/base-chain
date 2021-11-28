@@ -19,11 +19,13 @@ scale-info = { version = "1.0.0", default-features = false, features = ["derive"
 frame-support = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
 frame-system ={ version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
 pallet-timestamp ={ version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
+pallet-scheduler ={ version = "4.0.0-dev", git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81", default-features = false }
 pallet-nft = {default-features = false,path="../nft"}
 orml-nft = {default-features = false,path="../orml/nft"}
 pallet-assets = { default-features = false, path="../assets" }
 sp-arithmetic = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
 log = { version = "0.4.14", default-features = false }
+
 
 primitive={default-features = false, path="../../primitives/primitive"}
 

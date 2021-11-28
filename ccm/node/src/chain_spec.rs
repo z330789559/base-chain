@@ -243,9 +243,20 @@ fn testnet_genesis(
                     status: PenguinStatus::Active,
                     eggs: 100000u128,
                 },
-                8000,
+                20000,
             )],
-            yellow_penguin: vec![],
+            yellow_penguin: vec![(
+                AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),
+                PenguinConfig {
+                    owner: AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a")
+                        .unwrap(),
+                    start: 064,
+                    pre_eat_at: 0u64,
+                    status: PenguinStatus::Active,
+                    eggs: 100000u128,
+                },
+                200000,
+            )],
             small_yellow_penguin: vec![],
             male_penguin: vec![],
             init_per_day_supply: 5555555u128,

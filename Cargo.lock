@@ -4911,6 +4911,7 @@ dependencies = [
  "orml-nft",
  "pallet-assets",
  "pallet-nft",
+ "pallet-scheduler",
  "pallet-timestamp",
  "parity-scale-codec",
  "primitive",

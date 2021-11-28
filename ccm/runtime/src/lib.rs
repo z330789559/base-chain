@@ -532,7 +532,8 @@ parameter_types! {
     pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
     pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
     pub const YellowPenguinEggCountForIncubation: Balance =20 * DOLLARS;
-    pub const MalePenguinLifeSpan: BlockNumber= 7 * DAYS;
+    //7 days
+    pub const MalePenguinLifeSpan: BlockNumber= 20;
     pub const ColdStroage: PalletId = PalletId(*b"par/cold");
     pub const ClassOwnerId:  PalletId = PalletId(*b"par/cwid");
     pub const IncubationId:  PalletId = PalletId(*b"par/incu");
@@ -543,14 +544,20 @@ parameter_types! {
     pub const YellowPenguinEggRate: Permill = Permill::from_percent(48);
     pub const TechnicalPenguinEggRate: Permill = Permill::from_percent(5);
     pub const OperationPenguinEggRate: Permill = Permill::from_percent(5);
+    pub const BidCommissionRate:Permill = Permill::from_percent(3);
     pub const MalePenguinRate: Permill = Permill::from_percent(1);
-    pub const PenguinProducePeriod: BlockNumber =20 * MILLISECS_PER_BLOCK ;
-    pub const YellowPenguinDeadPeriod: BlockNumber =20 * MILLISECS_PER_BLOCK ;
+    //1 days
+    pub const PenguinProducePeriod: BlockNumber =20  ;
+        //1440 hours
+    pub const YellowPenguinDeadPeriod: BlockNumber =20  ;
+    // 5days
     pub const IncubationLivePeriod: BlockNumber = 5 * DAYS;
+    pub const BidMaxPeriod: BlockNumber = 3 * MINUTES;
 }
 
 impl penguin_farm::Config for Runtime {
     type Event = Event;
+    type Call = Call;
     type Currency = Balances;
     type AssetId = u32;
     type ClassId = u32;
@@ -578,7 +585,12 @@ impl penguin_farm::Config for Runtime {
     type IncubationLivePeriod = IncubationLivePeriod;
     type RedPenguinEggCountForIncubation = RedPenguinEggCountForIncubation;
     type YellowPenguinEggCountForIncubation = YellowPenguinEggCountForIncubation;
+    type BidCommissionRate = BidCommissionRate;
+    type BidMaxPeriod = BidMaxPeriod;
     type WeightInfo = ();
+    type Randomness = RandomnessCollectiveFlip;
+    type Schedule = Scheduler;
+    type PalletsOrigin = OriginCaller;
 }
 
 construct_runtime!(

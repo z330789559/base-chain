@@ -13,47 +13,171 @@ use sp_runtime::{
     traits::{MaybeSerializeDeserialize, Member},
     RuntimeDebug,
 };
-
-use scale_info::StaticTypeInfo;
 use sp_std::vec::Vec;
 mod mock;
 mod tests;
-use frame_support::scale_info::{Type, TypeInfo};
+use frame_support::scale_info::TypeInfo;
 use frame_support::sp_runtime::traits::{
-    AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, One, UniqueSaturatedFrom,
-    UniqueSaturatedInto, Zero,
+    AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, One,
+   Zero,
 };
 use sp_arithmetic::traits::CheckedRem;
+use sp_runtime::traits::BlockNumberProvider;
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;
 
 macro_rules! s {
     ($e: expr) => {
         sp_runtime::SaturatedConversion::saturated_into($e)
     };
 }
+
+macro_rules! purchase_penguin {
+    ($penguin:expr,$penguin_type:ident,$owner_penguin:ident,$caller:expr,$class_id:expr,$token_id:expr,$penguin_form:expr) => {{
+        let mut new_penguin = $penguin.clone();
+        let $penguin_type { owner, status,.. } = $penguin;
+        ensure!(&$caller != owner, Error::<T>::CanNotBuySelf);
+        ensure!(
+            status == &PenguinStatus::Bid,
+            Error::<T>::PenguinStatusError
+        );
+        let price: BalanceOf<T> = BidPenguin::<T>::get(($class_id, $token_id));
+        let amount = <T as Config>::Currency::total_balance(&$caller);
+        ensure!(amount > price, Error::<T>::BidBalanceNoEnough);
+        let commission = T::BidCommissionRate::get() * price;
+        <T as Config>::Currency::transfer(
+            &$caller,
+            owner,
+            price - commission,
+            ExistenceRequirement::KeepAlive,
+        )?;
+        <T as Config>::Currency::withdraw(
+            &$caller,
+            commission,
+            WithdrawReasons::FEE,
+            ExistenceRequirement::KeepAlive,
+        )?;
+        Self::inner_unbid($penguin_form.clone(), owner.clone(), $class_id, $token_id)?;
+        BidPenguin::<T>::remove(($class_id, $token_id));
+        new_penguin.owner = $caller.clone();
+			update_penguin!(@ $class_id, $token_id,$penguin_type,new_penguin);
+           $owner_penguin::<T>::try_mutate(owner, |ids| {
+            let index = ids.binary_search(&$token_id)?;
+            ids.remove(index);
+            Ok(())
+        }).map_err(|_:usize|Error::<T>::RemoveTokenIdError);
+        Self::deposit_event(Event::<T>::Purchase(
+            $caller,
+            ($class_id, $token_id),
+            owner.clone(),
+            price,
+        ));
+    }};
+}
 macro_rules! bid_penguin {
-    ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr) => {{
+    ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$flag:expr) => {{
+        let current_block = frame_system::Pallet::<T>::current_block_number();
+        let mut new_penguin = $e.clone();
+        let $tt {
+            eat_count,
+            owner,
+            start,
+			status,
+            ..
+        } = $e;
+        ensure!($caller == owner.clone(), Error::<T>::NoPermission);
+        if ($flag) {
+            ensure!(
+                current_block - start >= T::SmallYellowPenguinGrowPeriod::get(),
+                Error::<T>::SmallYellowLiveTooShort
+            );
+        }
+		ensure!(PenguinStatus::Active ==status ||PenguinStatus::Hunger ==status,  Error::<T>::PenguinStatusError );
+        new_penguin.status = PenguinStatus::Bid;
+        ensure!(eat_count == 0u32, Error::<T>::NeedClaimPenguinEgg);
+        if new_penguin.pre_eat_at < T::PenguinProducePeriod::get()   {
+			if current_block  >   T::PenguinProducePeriod::get(){
+				     new_penguin.pre_eat_at = current_block - T::PenguinProducePeriod::get();
+			}else{
+				new_penguin.pre_eat_at = Zero::zero();
+			}
+
+        }
+	update_penguin!(@ $class_id, $token_id,$tt,new_penguin);
+		 let _: Result<
+                                Vec<(
+                                    _,
+                                    _,
+                                )>,
+                                DispatchError,
+                            > = PendingTaskPenguin::<T>::try_mutate(
+                                current_block + T::BidMaxPeriod::get(),
+                                |value| {
+                                    let old_value = value.clone();
+                                    value.push(($class_id, $token_id));
+                                    Ok(old_value)
+                                },
+                            );
+    }};
+
+	($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$death_period:expr,$penguin_owner:ident) => {{
+        let current_block = frame_system::Pallet::<T>::current_block_number();
         let mut new_penguin = $e.clone();
         let $tt {
             pre_eat_at,
             eat_count,
-	        owner,
+            owner,
+			status,
             ..
         } = $e;
-		ensure!($caller == owner.clone(), Error::<T>::NoPermission);
+        ensure!($caller == owner.clone(), Error::<T>::NoPermission);
+		if current_block - pre_eat_at >= $death_period {
+
+		 Penguins::<T>::remove($class_id,$token_id);
+			    $penguin_owner::<T>::try_mutate(&owner,|ids|{
+							ids.binary_search(&$token_id).map(|index|{
+								ids.remove(index)
+							})
+						 });
+			 Self::deposit_event(Event::<T>::PenguinDead($class_id,$token_id));
+		}else{
+
+		ensure!(PenguinStatus::Active ==status ||PenguinStatus::Hunger ==status,  Error::<T>::PenguinStatusError );
         new_penguin.status = PenguinStatus::Bid;
         ensure!(eat_count == 0u32, Error::<T>::NeedClaimPenguinEgg);
-        if new_penguin.pre_eat_at < T::PenguinProducePeriod::get() {
-            new_penguin.pre_eat_at =
-                frame_system::Pallet::<T>::current_block_number() - T::PenguinProducePeriod::get();
+        if new_penguin.pre_eat_at < T::PenguinProducePeriod::get()   {
+			if current_block  >   T::PenguinProducePeriod::get(){
+				     new_penguin.pre_eat_at = current_block - T::PenguinProducePeriod::get();
+			}else{
+				new_penguin.pre_eat_at = Zero::zero();
+			}
+
         }
-        Penguins::<T>::mutate($class_id, $token_id, |penguin| {
-            sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
-        });
+			update_penguin!(@ $class_id, $token_id,$tt,new_penguin);
+		 let _: Result<
+                                Vec<(
+                                    _,
+                                    _,
+                                )>,
+                                DispatchError,
+                            > = PendingTaskPenguin::<T>::try_mutate(
+                                current_block + T::BidMaxPeriod::get(),
+                                |value| {
+                                    let old_value = value.clone();
+                                    value.push(($class_id, $token_id));
+                                    Ok(old_value)
+                                },
+                            );
+	   }
     }};
 }
 
 macro_rules! unbid_penguin {
     ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$flag:expr) => {{
+		  let current_block = frame_system::Pallet::<T>::current_block_number();
 					let mut new_penguin = $e.clone();
 					let $tt{
 						pre_eat_at,
@@ -62,26 +186,17 @@ macro_rules! unbid_penguin {
 						owner,
 						..
 				} = $e;
+					ensure!(PenguinStatus::Bid == status,Error::<T>::MustNeedIsBid);
 				ensure!($caller == owner.clone(), Error::<T>::NoPermission);
-				match ($flag, pre_eat_at > T::PenguinProducePeriod::get()) {
-					(false, true) => {
+				match ($flag, current_block - pre_eat_at > T::PenguinProducePeriod::get()) {
+					(false, true)|(_, false)  => {
 						if status != PenguinStatus::Hunger {
 							new_penguin.status = PenguinStatus::Hunger;
-							Penguins::<T>::mutate($class_id, $token_id, |penguin| {
-								sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
-							});
+							update_penguin!(@ $class_id, $token_id,$tt,new_penguin);
 						};
 					}
-					(_, false) => {
-					if status != PenguinStatus::Active {
-					new_penguin.status = PenguinStatus::Active;
-					Penguins::<T>::mutate($class_id, $token_id, |penguin| {
-					sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
-					});
-					};
-					}
 					(true, true) => {
-						if pre_eat_at > T::YellowPenguinDeadPeriod::get() {
+						if current_block - pre_eat_at > T::YellowPenguinDeadPeriod::get() {
 							Penguins::<T>::remove($class_id, $token_id);
 							let _:Result<_,usize>=OwnerYellowPenguin::<T>::try_mutate($caller, |ids| {
 								let index = ids.binary_search(&$token_id)?;
@@ -92,6 +207,49 @@ macro_rules! unbid_penguin {
 					}
 				}
     }};
+}
+
+macro_rules! update_penguin {
+    ($class_id:expr,$token_id:expr,$tt:ident,$new_penguin:expr) => {{
+        Penguins::<T>::mutate($class_id, $token_id, |penguin| {
+            sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt($new_penguin)));
+        });
+    }};
+    (@ $class_id:tt,$token_id:tt,$tt:tt,$new_penguin:expr) => {{
+        Penguins::<T>::mutate($class_id, $token_id, |penguin| {
+            sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt($new_penguin)));
+        });
+    }};
+}
+
+macro_rules! unbid_penguin_system{
+	($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$flag:expr) => {{
+		  let current_block = frame_system::Pallet::<T>::current_block_number();
+					let mut new_penguin = $e.clone();
+					let $tt{
+						pre_eat_at,
+						eat_count,
+						status,
+						owner,
+						..
+				} = $e;
+					if PenguinStatus::Bid != status { return;}
+		             if  $flag && current_block > T::YellowPenguinDeadPeriod::get() +pre_eat_at {
+							Penguins::<T>::remove($class_id, $token_id);
+							let _:Result<_,usize>=OwnerYellowPenguin::<T>::try_mutate(owner, |ids| {
+								let index = ids.binary_search(&$token_id)?;
+								ids.remove(index);
+								Ok(())
+							});
+						}else if current_block > T::PenguinProducePeriod::get() + pre_eat_at && status != PenguinStatus::Hunger {
+			             new_penguin.status = PenguinStatus::Hunger;
+							Penguins::<T>::mutate($class_id, $token_id, |penguin| {
+								sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
+							});
+		       }
+
+    }};
+
 }
 
 mod weights;
@@ -137,7 +295,7 @@ pub enum PenguinStatus {
     ///挂单
     Bid = 2,
     ///死亡
-    death = 3,
+    Death = 3,
 }
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
@@ -243,20 +401,27 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use crate::weights::WeightInfo;
-    use frame_support::sp_runtime::sp_std::ops::Sub;
+    use frame_support::dispatch::Dispatchable;
     use frame_support::sp_runtime::traits::{
-        AtLeast32BitUnsigned, BlockNumberProvider, Bounded, UniqueSaturatedInto,
+        AtLeast32BitUnsigned, BlockNumberProvider, Saturating, UniqueSaturatedInto,
     };
-    use frame_support::sp_runtime::{Permill, SaturatedConversion};
+    use frame_support::sp_runtime::Permill;
+    use frame_support::sp_std::convert::TryFrom;
+    use frame_support::sp_std::ops::Add;
     use frame_support::sp_std::time::Duration;
-    use frame_support::traits::fungibles::Mutate;
-    use frame_support::traits::{Time, UnixTime};
-    use frame_support::{Never, PalletId};
-    use frame_system::ensure_signed;
+    use frame_support::traits::schedule::{Anon, DispatchTime};
+    use frame_support::traits::{ExistenceRequirement, UnixTime, WithdrawReasons};
+    use frame_support::traits::Randomness;
+    use frame_support::transactional;
+    use frame_support::PalletId;
     use frame_system::pallet_prelude::OriginFor;
+    use frame_system::{ensure_none, ensure_root, ensure_signed};
+    use sp_runtime::traits::Hash;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_assets::Config {
+    pub trait Config:
+        frame_system::Config + pallet_assets::Config + pallet_scheduler::Config
+    {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
@@ -272,6 +437,10 @@ pub mod pallet {
             + From<u32>
             + Into<u32>
             + Copy;
+
+        type Call: Parameter
+            + Dispatchable<Origin = <Self as frame_system::Config>::Origin>
+            + From<Call<Self>>;
 
         type ClassId: Parameter
             + Member
@@ -321,6 +490,9 @@ pub mod pallet {
         ///公企鹅产蛋每天最大限制
         #[pallet::constant]
         type MalePenguinEggLimit: Get<BalanceOf<Self>>;
+        ///挂单佣金率
+        #[pallet::constant]
+        type BidCommissionRate: Get<Permill>;
 
         ///公企鹅生命时间
         #[pallet::constant]
@@ -366,17 +538,34 @@ pub mod pallet {
         #[pallet::constant]
         type SmallYellowPenguinGrowPeriod: Get<<Self as frame_system::Config>::BlockNumber>;
 
-        ///小黄企鹅生长时间
+        ///孵化劵存活时间
         #[pallet::constant]
         type IncubationLivePeriod: Get<<Self as frame_system::Config>::BlockNumber>;
+
+        ///挂单最大时间
+        #[pallet::constant]
+        type BidMaxPeriod: Get<<Self as frame_system::Config>::BlockNumber>;
 
         ///红企鹅产生孵化劵需要蛋数
         #[pallet::constant]
         type RedPenguinEggCountForIncubation: Get<BalanceOf<Self>>;
 
+        type PalletsOrigin: From<frame_system::RawOrigin<Self::AccountId>>;
+
         ///黄企鹅产生孵化劵需要蛋数
         #[pallet::constant]
         type YellowPenguinEggCountForIncubation: Get<BalanceOf<Self>>;
+
+        type Schedule: frame_support::traits::schedule::Anon<
+            <Self as frame_system::Config>::BlockNumber,
+            <Self as Config>::Call,
+            <Self as Config>::PalletsOrigin,
+        >;
+
+        type Randomness: Randomness<
+            <Self as frame_system::Config>::Hash,
+            <Self as frame_system::Config>::BlockNumber,
+        >;
 
         type WeightInfo: WeightInfo;
     }
@@ -384,17 +573,64 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
-        Claim(PenguinFarmOf<T>, BalanceOf<T>),
+        Claim(ClassIdOf<T>, TokenIdOf<T>, BalanceOf<T>),
         Incubation(IncubationCouponOf<T>),
         Incubations(Vec<TokenIdOf<T>>, BlockNumberOf<T>),
+        LowIncubations(Vec<TokenIdOf<T>>, BlockNumberOf<T>),
         LowIncubation(IncubationCouponOf<T>),
         Bid(ClassIdOf<T>, TokenIdOf<T>),
         UnBid(ClassIdOf<T>, TokenIdOf<T>),
+        Purchase(
+            AccountIdOf<T>,
+            (ClassIdOf<T>, TokenIdOf<T>),
+            AccountIdOf<T>,
+            BalanceOf<T>,
+        ),
+        AdminChanged(AccountIdOf<T>),
+        HightCouponExpire(ClassIdOf<T>, TokenIdOf<T>),
+        LowCouponExpire(ClassIdOf<T>, TokenIdOf<T>),
+        PenguinDead(ClassIdOf<T>, TokenIdOf<T>),
+        PenguinUpgrade(ClassIdOf<T>, TokenIdOf<T>, ClassIdOf<T>, TokenIdOf<T>),
+        FeedPenguinSuccess(ClassIdOf<T>, TokenIdOf<T>),
     }
 
     /// Error for non-fungible-token module.
     #[pallet::error]
     pub enum Error<T> {
+		///移除TokenId错误
+		RemoveTokenIdError,
+        ///移除公企鹅id错误
+		RemoveMalePenguinError,
+        ///删除孵化券错误
+		RemoveCouponError,
+        ///企鹅蛋已经领取
+        PenguinEggHadClaim,
+        ///企鹅产蛋间隔时间太短
+        PenguinProduceTooShort,
+        ///孵化劵已经过期
+        IncubationCouponExpire,
+        ///孵化劵不存在
+        IncubationCouponNoExist,
+        ///孵化劵类别不对
+        IncubationCouponClassError,
+        ///孵化蛋不足
+        IncubationBalanceNoEnough,
+        ///企鹅处于吃饱状态
+        PenguinNoHunger,
+        ///管理员不存在
+        AdminNoExist,
+        ///管理员已经存在
+        AdminHadExist,
+        ///要求管理员
+        RequireAdmin,
+        ///购买金额不足
+        BidBalanceNoEnough,
+        ///拍卖价格不匹配
+        BidPriceUnmatch,
+        ///必须是bdi状态
+        MustNeedIsBid,
+        ///不能到达的地方
+        UnBidUnReach,
         ///必须先收取企鹅蛋
         NeedClaimPenguinEgg,
         ///求下次剩余发卷次数报错
@@ -409,6 +645,7 @@ pub mod pallet {
         MalePenguinBanBid,
         ///获取孵化劵id错误
         IncubationTokenIdError,
+        SmallYellowLiveTooShort,
 
         PenguinProduceCalError,
         /// No available class ID
@@ -424,6 +661,8 @@ pub mod pallet {
         /// Can not destroy class
         /// Total issuance is not 0
         CannotDestroyClass,
+        ///不能买自己的企鹅
+        CanNotBuySelf,
     }
 
     pub type AssetOf<T> = <T as Config>::AssetId;
@@ -445,45 +684,60 @@ pub mod pallet {
         IncubationCoupon<BlockNumberOf<T>, AccountIdOf<T>, ClassIdOf<T>, TokenIdOf<T>>;
     pub type PenguinFarmOf<T> =
         PenguinFarm<BlockNumberOf<T>, AccountIdOf<T>, BalanceOf<T>, ClassIdOf<T>, TokenIdOf<T>>;
-    /// red penguin owner
+    /// 红企鹅拥有数量
     #[pallet::storage]
     #[pallet::getter(fn owner_red_penguin)]
     pub type OwnerRedPenguin<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, Vec<TokenIdOf<T>>, ValueQuery>;
 
-    /// yellow penguin owner
+    /// 黄企鹅拥有数量
     #[pallet::storage]
     #[pallet::getter(fn owner_yellow_penguin)]
     pub type OwnerYellowPenguin<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, Vec<TokenIdOf<T>>, ValueQuery>;
 
-    /// small yellow penguin owner
+    /// 小黄企鹅拥有数量
     #[pallet::storage]
     #[pallet::getter(fn owner_small_yellow_penguin)]
     pub type OwnerSmallYellowPenguin<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, Vec<TokenIdOf<T>>, ValueQuery>;
 
-    /// male penguin owner
+    /// 公企鹅拥有数量
     #[pallet::storage]
     #[pallet::getter(fn owner_male_penguin)]
     pub type OwnerMalePenguin<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, Vec<TokenIdOf<T>>, ValueQuery>;
 
     #[pallet::type_value]
-    pub fn default_for_epoch<T: Config>() -> u32 {
+    pub fn DefaultForEpoch<T: Config>() -> u32 {
         1u32
     }
 
-    /// current epoch
+    /// 当前纪元索引
     #[pallet::storage]
     #[pallet::getter(fn current_epoch)]
-    pub type CurrentEpoch<T: Config> = StorageValue<_, u32, ValueQuery, default_for_epoch<T>>;
-    ///current epoch amount
+    pub type CurrentEpoch<T: Config> = StorageValue<_, u32, ValueQuery, DefaultForEpoch<T>>;
+
+    ///黄企鹅数量
+    #[pallet::storage]
+    #[pallet::getter(fn yellow_penguin_count)]
+    pub type YellowPenguinCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+    ///黄企鹅数量
+    #[pallet::storage]
+    #[pallet::getter(fn small_yellow_penguin_count)]
+    pub type SmallYellowPenguinCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+    ///公企鹅数量
+    #[pallet::storage]
+    #[pallet::getter(fn male_penguin_count)]
+    pub type MalePenguinCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+    ///当前纪元总金额
     #[pallet::storage]
     #[pallet::getter(fn current_epoch_balance)]
     pub type CurrentEpochBalance<T: Config> =
         StorageMap<_, Twox64Concat, u32, BalanceOf<T>, ValueQuery>;
-    ///current epoch period
+    ///当前纪元时长
     #[pallet::storage]
     #[pallet::getter(fn current_epoch_period)]
     pub type CurrentEpochPeriod<T: Config> =
@@ -503,17 +757,17 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn male_penguin_produce_rate)]
     pub type MalePenguinProduceRate<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-    /// current
+    /// 红企鹅的类别id
     #[pallet::storage]
     #[pallet::getter(fn red_peng_class_id)]
     pub type RedPenguinClassId<T: Config> = StorageValue<_, ClassIdOf<T>, ValueQuery>;
 
-    /// 当前epoch
+    /// 黄企鹅的类别id
     #[pallet::storage]
     #[pallet::getter(fn yellow_penguin_class_id)]
     pub type YellowPenguinClassId<T: Config> = StorageValue<_, ClassIdOf<T>, ValueQuery>;
 
-    /// 当前epoch
+    /// 小黄企鹅的类别id
     #[pallet::storage]
     #[pallet::getter(fn small_yellow_penguin_class_id)]
     pub type SmallYellowPenguinClassId<T: Config> = StorageValue<_, ClassIdOf<T>, ValueQuery>;
@@ -634,8 +888,13 @@ pub mod pallet {
     ///待处理的企鹅任务
     #[pallet::storage]
     #[pallet::getter(fn pending_task_penguin)]
-    pub type PendingTaskPenguin<T: Config> =
-        StorageMap<_, Twox64Concat, BlockNumberOf<T>, PenguinFarmOf<T>, OptionQuery>;
+    pub type PendingTaskPenguin<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        BlockNumberOf<T>,
+        Vec<(ClassIdOf<T>, TokenIdOf<T>)>,
+        ValueQuery,
+    >;
 
     ///待处理的孵化劵任务
     #[pallet::storage]
@@ -647,6 +906,16 @@ pub mod pallet {
         Vec<(ClassIdOf<T>, TokenIdOf<T>)>,
         ValueQuery,
     >;
+
+    ///拍卖中的企鹅
+    #[pallet::storage]
+    #[pallet::getter(fn bid_penguin)]
+    pub type BidPenguin<T: Config> =
+        StorageMap<_, Twox64Concat, (ClassIdOf<T>, TokenIdOf<T>), BalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn admin)]
+    pub(super) type Admin<T: Config> = StorageValue<_, Vec<AccountIdOf<T>>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -927,28 +1196,97 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberOf<T>> for Pallet<T>
-    where
-        <<T as pallet::Config>::Currency as frame_support::traits::Currency<
-            <T as frame_system::Config>::AccountId,
-        >>::Balance: From<u128>,
+    // where
+    //     <<T as pallet::Config>::Currency as frame_support::traits::Currency<
+    //         <T as frame_system::Config>::AccountId,
+    //     >>::Balance: From<u128>,
     {
         fn on_finalize(now: T::BlockNumber) {
-            let expire_incoubation =
-                PendingTaskIncubation::<T>::get(now - T::IncubationLivePeriod::get());
-            expire_incoubation
-                .into_iter()
-                .for_each(|(class_id, token_id)| {
-                    if class_id == IncubationCouponClassId::<T>::get() {
-                        IncubationCoupons::<T>::remove(class_id, token_id);
-                    } else {
-                        LowIncubationCoupons::<T>::remove(class_id, token_id);
-                    }
-                });
+            if now <= T::IncubationLivePeriod::get() {
+                return;
+            }
+
             //修改企鹅状态(喂养时间，喂养状态)
         }
 
         fn on_initialize(now: T::BlockNumber) -> Weight {
-            T::DbWeight::get().reads_writes(2, 1)
+            let mut consumed_weight: Weight = 0;
+
+            let mut add_db_reads_writes = |reads, writes| {
+                consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
+            };
+            let expire_incubation = PendingTaskIncubation::<T>::take(
+                now.saturating_sub(T::IncubationLivePeriod::get()),
+            );
+            expire_incubation
+                .into_iter()
+                .for_each(|(class_id, token_id)| {
+                    if class_id == IncubationCouponClassId::<T>::get() {
+                        IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
+                            OwnerIncubationCouponAsset::<T>::try_mutate(&coupon.owner, |ids| {
+                                ids.binary_search(&token_id).map(|index| ids.remove(index))
+                            });
+                        });
+
+                        Self::deposit_event(Event::<T>::HightCouponExpire(class_id, token_id));
+                    } else {
+                        IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
+                            OwnerIncubationCouponAsset::<T>::try_mutate(&coupon.owner, |ids| {
+                                ids.binary_search(&token_id).map(|index| ids.remove(index))
+                            });
+                        });
+                        Self::deposit_event(Event::<T>::LowCouponExpire(class_id, token_id));
+                    }
+
+                    add_db_reads_writes(2, 1);
+                });
+
+            if now >= T::BidMaxPeriod::get() {
+                let expire_bid =
+                    PendingTaskPenguin::<T>::take(now.saturating_sub(T::BidMaxPeriod::get()));
+                expire_bid.into_iter().for_each(|(class_id, token_id)| {
+                    BidPenguin::<T>::remove((class_id, token_id));
+
+                    let penguin = Penguins::<T>::get(class_id, token_id);
+                    match penguin {
+                        Some(inner) => match inner {
+                            PenguinFarm::RedPenguin(red_penguin) => {
+                                unbid_penguin_system!(
+                                    red_penguin,
+                                    RedPenguin,
+                                    class_id,
+                                    token_id,
+                                    false
+                                )
+                            }
+                            PenguinFarm::YellowPenguin(yellow_penguin) => {
+                                unbid_penguin_system!(
+                                    yellow_penguin,
+                                    YellowPenguin,
+                                    class_id,
+                                    token_id,
+                                    true
+                                )
+                            }
+                            PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
+                                unbid_penguin_system!(
+                                    small_yellow_penguin,
+                                    SmallYellowPenguin,
+                                    class_id,
+                                    token_id,
+                                    false
+                                )
+                            }
+                            _ => {}
+                        },
+                        None => {}
+                    }
+                    Self::deposit_event(Event::<T>::UnBid(class_id, token_id));
+                    add_db_reads_writes(4, 2);
+                });
+            }
+
+            consumed_weight
         }
     }
 
@@ -956,17 +1294,14 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::call]
-    impl<T: Config> Pallet<T>
-    where
-        <<T as pallet::Config>::Currency as frame_support::traits::Currency<
-            <T as frame_system::Config>::AccountId,
-        >>::Balance: From<u128>,
-    {
+    impl<T: Config> Pallet<T> {
         //!
         //! 收获企鹅蛋，会根据喂养次数计算收成，
         //! 每20枚企鹅蛋产生一张孵化劵，孵化劵有一定概率孵化出公企鹅
+        //! 公企鹅不生产孵化劵
         //!
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(20_00 + T::DbWeight::get().writes(1))]
+        #[transactional]
         pub fn claim_penguin_egg(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
@@ -988,11 +1323,10 @@ pub mod pallet {
             );
             let penguin_produce_egg_rate: BalanceOf<T> =
                 <Pallet<T>>::compute_produce_egg_rate(&penguin);
-            let mut produce_egg: BalanceOf<T> = Default::default();
             let block_number = frame_system::Pallet::<T>::current_block_number();
             match &penguin {
-                PenguinFarm::RedPenguin(redPenguin) => {
-                    let mut new_penguin = redPenguin.clone();
+                PenguinFarm::RedPenguin(red_penguin) => {
+                    let mut new_penguin = red_penguin.clone();
                     let RedPenguin {
                         pre_eat_at,
                         owner,
@@ -1000,31 +1334,27 @@ pub mod pallet {
                         incubation_remain,
                         eggs,
                         ..
-                    } = redPenguin;
+                    } = red_penguin;
                     ensure!(owner == &caller, Error::<T>::NoPermission);
                     //企鹅产蛋率 * 喂养次数
-                    let eat_count =
-                        if block_number - *pre_eat_at < s!(T::PenguinProducePeriod::get()) {
-                            new_penguin.eat_count = 1u32;
-                            eat_count - 1
-                        } else {
-                            new_penguin.eat_count = 0u32;
-                            *eat_count
-                        };
-                    produce_egg = penguin_produce_egg_rate
-                        * UniqueSaturatedFrom::<u32>::unique_saturated_from(eat_count);
-                    new_penguin.eggs = new_penguin.eggs + produce_egg;
+                    ensure!(
+                        block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
+                        Error::<T>::PenguinProduceTooShort
+                    );
+                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
+                    new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
+                    let remain = penguin_produce_egg_rate + *incubation_remain;
                     //处理孵化劵张数，发放孵化劵
                     let incubation_count = UniqueSaturatedInto::<usize>::unique_saturated_into(
-                        *incubation_remain / T::RedPenguinEggCountForIncubation::get(),
+                        remain / T::RedPenguinEggCountForIncubation::get(),
                     );
-                    new_penguin.incubation_remain = incubation_remain
+                    new_penguin.incubation_remain = remain
                         .checked_rem(&T::RedPenguinEggCountForIncubation::get())
                         .ok_or(Error::<T>::IncubationRemainError)?;
-                    new_penguin.eggs = *eggs + produce_egg;
+                    new_penguin.eggs = *eggs + penguin_produce_egg_rate;
                     let incubation_coupon_class_id = IncubationCouponClassId::<T>::get();
                     let mut incubation_ids = sp_std::vec![];
-
+                    new_penguin.eat_count = 1;
                     let _: Vec<TokenIdOf<T>> = (0..incubation_count)
                         .filter_map(|_| {
                             let id: TokenIdOf<T> = <Pallet<T>>::get_next_incubation_id()
@@ -1042,6 +1372,11 @@ pub mod pallet {
                                     class_id: incubation_coupon_class_id,
                                 },
                             );
+                            let _: Result<_, ()> =
+                                OwnerIncubationCouponAsset::<T>::try_mutate(owner.clone(), |ids| {
+                                    ids.push(id);
+                                    Ok(())
+                                });
                             let _: Result<
                                 Vec<(
                                     <T as pallet::Config>::ClassId,
@@ -1056,79 +1391,596 @@ pub mod pallet {
                                     Ok(old_value)
                                 },
                             );
+                            log::info!("孵化劵id  {:?}", id);
+                            Some(id)
+                        })
+                        .collect::<Vec<TokenIdOf<T>>>();
+                    if incubation_ids.len() > 0 {
+                        Self::deposit_event(Event::<T>::Incubations(incubation_ids, block_number));
+                    }
+                    //发放企鹅蛋
+                    let _ = <T as pallet::Config>::Currency::deposit_into_existing(
+                        &caller,
+                        penguin_produce_egg_rate,
+                    );
+                    update_penguin!(class_id, token_id, RedPenguin, new_penguin);
+                    Self::deposit_event(Event::<T>::Claim(
+                        class_id,
+                        token_id,
+                        penguin_produce_egg_rate,
+                    ));
+                }
+                PenguinFarm::YellowPenguin(yellow_penguin) => {
+                    let YellowPenguin {
+                        owner,
+                        eat_count,
+                        incubation_remain,
+                        eggs,
+                        pre_eat_at,
+                        ..
+                    } = yellow_penguin;
+                    let mut new_penguin = yellow_penguin.clone();
+                    ensure!(owner == &caller, Error::<T>::NoPermission);
+                    //企鹅产蛋率 * 喂养次数
+                    ensure!(
+                        block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
+                        Error::<T>::PenguinProduceTooShort
+                    );
+                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
+                    new_penguin.eat_count = 1;
+                    log::info!("产蛋数量 {:?}", penguin_produce_egg_rate);
+                    new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
+                    let remain = penguin_produce_egg_rate + *incubation_remain;
+                    //处理孵化劵张数，发放孵化劵
+                    let incubation_count = UniqueSaturatedInto::<usize>::unique_saturated_into(
+                        remain / T::YellowPenguinEggCountForIncubation::get(),
+                    );
+                    log::info!("孵化劵数量 {:?}", incubation_count);
+                    new_penguin.incubation_remain = remain
+                        .checked_rem(&T::YellowPenguinEggCountForIncubation::get())
+                        .ok_or(Error::<T>::IncubationRemainError)?;
+                    new_penguin.eggs = *eggs + penguin_produce_egg_rate;
+                    let low_incubation_coupon_class_id = LowIncubationCouponClassId::<T>::get();
+                    let mut incubation_ids = sp_std::vec![];
+
+                    let _: Vec<TokenIdOf<T>> = (0..incubation_count)
+                        .filter_map(|_| {
+                            let id: TokenIdOf<T> = <Pallet<T>>::get_next_incubation_id()
+                                .map_err(|_| Error::<T>::IncubationTokenIdError)
+                                .ok()?;
+                            incubation_ids.push(id);
+                            IncubationCoupons::<T>::insert(
+                                low_incubation_coupon_class_id,
+                                id.clone(),
+                                IncubationCouponOf::<T> {
+                                    owner: owner.clone(),
+                                    start: block_number,
+                                    status: CouponStatus::Liquid,
+                                    asset_id: id,
+                                    class_id: low_incubation_coupon_class_id,
+                                },
+                            );
+                            let _: Result<_, ()> =
+                                OwnerIncubationCouponAsset::<T>::try_mutate(owner.clone(), |ids| {
+                                    ids.push(id);
+                                    Ok(())
+                                });
+                            let _: Result<
+                                Vec<(
+                                    <T as pallet::Config>::ClassId,
+                                    <T as pallet::Config>::TokenId,
+                                )>,
+                                DispatchError,
+                            > = PendingTaskIncubation::<T>::try_mutate(
+                                block_number + T::IncubationLivePeriod::get(),
+                                |value| {
+                                    let old_value = value.clone();
+                                    value.push((low_incubation_coupon_class_id, id));
+                                    Ok(old_value)
+                                },
+                            );
                             Some(id)
                         })
                         .collect::<Vec<TokenIdOf<T>>>();
 
-                    Self::deposit_event(Event::<T>::Incubations(incubation_ids, block_number));
+                    if incubation_ids.len() > 0 {
+                        Self::deposit_event(Event::<T>::Incubations(incubation_ids, block_number));
+                    }
                     //发放企鹅蛋
                     let _ = <T as pallet::Config>::Currency::deposit_into_existing(
                         &caller,
-                        produce_egg,
+                        penguin_produce_egg_rate,
                     );
+                    update_penguin!(class_id, token_id, YellowPenguin, new_penguin);
                     Self::deposit_event(Event::<T>::Claim(
-                        PenguinFarmOf::<T>::RedPenguin(new_penguin),
-                        produce_egg,
+                        class_id,
+                        token_id,
+                        penguin_produce_egg_rate,
                     ));
                 }
-                PenguinFarm::YellowPenguin(YellowPenguin {
-                    owner,
-                    eat_count,
-                    incubation_remain,
-                    eggs,
-                    ..
-                }) => {}
-                PenguinFarm::MalePenguin(MalePenguin {
-                    owner,
-                    eat_count,
-                    incubation_remain,
-                    eggs,
-                    ..
-                }) => {}
+                PenguinFarm::MalePenguin(male_penguin) => {
+                    let mut new_penguin = male_penguin.clone();
+                    let MalePenguin {
+                        pre_eat_at,
+                        owner,
+                        eat_count,
+                        ..
+                    } = male_penguin;
+                    ensure!(owner == &caller, Error::<T>::NoPermission);
+                    //企鹅产蛋率 * 喂养次数
+                    ensure!(
+                        block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
+                        Error::<T>::PenguinProduceTooShort
+                    );
+                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
+                    new_penguin.eat_count = 1;
+                    log::info!("产蛋数量 {:?}", penguin_produce_egg_rate);
+                    new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
+                    //发放企鹅蛋
+                    let _ = <T as pallet::Config>::Currency::deposit_into_existing(
+                        &caller,
+                        penguin_produce_egg_rate,
+                    );
+                    update_penguin!(class_id, token_id, MalePenguin, new_penguin);
+                    Self::deposit_event(Event::<T>::Claim(
+                        class_id,
+                        token_id,
+                        penguin_produce_egg_rate,
+                    ));
+                }
                 PenguinFarm::SmallYellowPenguin(_) => {}
             }
 
             Ok(().into())
         }
 
-        ///喂养企鹅
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(0)]
+        pub fn revert_admin(
+            origin: OriginFor<T>,
+            new: AccountIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            // This is a public call, so we ensure that the origin is some signed account.
+            ensure_root(origin)?;
+
+            ensure!(
+                <Admin<T>>::get().binary_search(&new).is_ok(),
+                Error::<T>::AdminNoExist
+            );
+            <Admin<T>>::mutate(|admins| {
+                admins.binary_search(&new).map(|index| {
+                    admins.remove(index);
+                });
+            });
+
+            Self::deposit_event(Event::AdminChanged(new));
+            // Admin user does not pay a fee.
+            Ok(Pays::No.into())
+        }
+
+        #[pallet::weight(0)]
+        pub fn force_set_admin(
+            origin: OriginFor<T>,
+            new: AccountIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ensure!(
+                <Admin<T>>::get().binary_search(&new).is_err(),
+                Error::<T>::AdminHadExist
+            );
+
+            <Admin<T>>::mutate(|admins| {
+                admins.push(new.clone());
+            });
+            Self::deposit_event(Event::AdminChanged(new));
+            Ok(Pays::No.into())
+        }
+
+        /// 喂养企鹅
+        /// 系统喂养所以暂时不收手续费
+        /// 喂养的前提是必须间隔时间必须大于产蛋时间
+        /// 所有企鹅都需要喂养
+        #[pallet::weight(0)]
+        #[transactional]
         pub fn feed_penguin(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            Ok(().into())
+            let caller = ensure_signed(origin)?;
+            ensure!(
+                <Admin<T>>::get().contains(&caller),
+                Error::<T>::NoPermission
+            );
+            let block_number = frame_system::Pallet::<T>::current_block_number();
+            let penguin =
+                Penguins::<T>::get(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
+            match penguin {
+                PenguinFarm::RedPenguin(red_penguin) => {
+                    let mut new_penguin = red_penguin.clone();
+                    let RedPenguin {
+                        pre_eat_at,
+                        eat_count,
+                        status,
+                        ..
+                    } = red_penguin;
+                    ensure!(status != PenguinStatus::Bid, Error::<T>::PenguinStatusError);
+                    ensure!(
+                        block_number > pre_eat_at + T::PenguinProducePeriod::get(),
+                        Error::<T>::PenguinNoHunger
+                    );
+                    new_penguin.eat_count = 1;
+                    new_penguin.pre_eat_at = block_number;
+                    new_penguin.status = PenguinStatus::Active;
+                    Penguins::<T>::mutate(class_id, token_id, |penguin| {
+                        sp_std::mem::swap(
+                            penguin,
+                            &mut Some(PenguinFarmOf::<T>::RedPenguin(new_penguin)),
+                        );
+                    });
+                    Self::deposit_event(Event::<T>::FeedPenguinSuccess(class_id, token_id));
+                }
+                PenguinFarm::YellowPenguin(yellow_penguin) => {
+                    let mut new_penguin = yellow_penguin.clone();
+                    let YellowPenguin {
+                        pre_eat_at,
+                        eat_count,
+                        status,
+                        owner,
+                        ..
+                    } = yellow_penguin;
+                    ensure!(status != PenguinStatus::Bid, Error::<T>::PenguinStatusError);
+                    ensure!(
+                        block_number > pre_eat_at + T::PenguinProducePeriod::get(),
+                        Error::<T>::PenguinNoHunger
+                    );
+                    //企鹅死亡
+                    if block_number > pre_eat_at + T::YellowPenguinDeadPeriod::get() {
+                        Penguins::<T>::remove(class_id, token_id);
+                        OwnerYellowPenguin::<T>::try_mutate(&owner, |ids| {
+                            ids.binary_search(&token_id).map(|index| ids.remove(index))
+                        });
+                        Self::deposit_event(Event::<T>::PenguinDead(class_id, token_id));
+                        YellowPenguinCount::<T>::mutate(|value| *value = *value - 1);
+                    } else {
+                        new_penguin.eat_count = 1;
+                        new_penguin.pre_eat_at = block_number;
+                        new_penguin.status = PenguinStatus::Active;
+                        Penguins::<T>::mutate(class_id, token_id, |penguin| {
+                            sp_std::mem::swap(
+                                penguin,
+                                &mut Some(PenguinFarmOf::<T>::YellowPenguin(new_penguin)),
+                            );
+                        });
+                        Self::deposit_event(Event::<T>::FeedPenguinSuccess(class_id, token_id));
+                    }
+                }
+                PenguinFarm::MalePenguin(male_penguin) => {
+                    let mut new_penguin = male_penguin.clone();
+                    let MalePenguin {
+                        pre_eat_at,
+                        eat_count,
+                        status,
+                        owner,
+                        ..
+                    } = male_penguin;
+                    ensure!(
+                        block_number > pre_eat_at + T::PenguinProducePeriod::get(),
+                        Error::<T>::PenguinNoHunger
+                    );
+                    //企鹅死亡
+                    if block_number > pre_eat_at + T::MalePenguinLifeSpan::get() {
+                        Penguins::<T>::remove(class_id, token_id);
+                        OwnerMalePenguin::<T>::try_mutate(&owner, |ids| {
+                            ids.binary_search(&token_id).map(|index| ids.remove(index))
+                        }).map_err(|_|Error::<T>::RemoveMalePenguinError)?;
+                        Self::deposit_event(Event::<T>::PenguinDead(class_id, token_id));
+                        MalePenguinCount::<T>::mutate(|value| *value = *value - 1);
+                    } else {
+                        new_penguin.eat_count = 1;
+                        new_penguin.pre_eat_at = block_number;
+                        new_penguin.status = PenguinStatus::Active;
+                        Penguins::<T>::mutate(class_id, token_id, |penguin| {
+                            sp_std::mem::swap(
+                                penguin,
+                                &mut Some(PenguinFarmOf::<T>::MalePenguin(new_penguin)),
+                            );
+                        });
+                        Self::deposit_event(Event::<T>::FeedPenguinSuccess(class_id, token_id));
+                    }
+                }
+                PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
+                    let mut new_penguin = small_yellow_penguin.clone();
+                    let SmallYellowPenguin {
+                        pre_eat_at,
+                        eat_count,
+                        status,
+                        grow_value,
+                        owner,
+                        ..
+                    } = small_yellow_penguin;
+                    ensure!(status != PenguinStatus::Bid, Error::<T>::PenguinStatusError);
+                    ensure!(
+                        block_number > pre_eat_at + T::PenguinProducePeriod::get(),
+                        Error::<T>::PenguinNoHunger
+                    );
+
+                    if new_penguin.grow_value == T::SmallYellowPenguinGrowPeriod::get() {
+                        let id = Self::get_next_yellow_id()?;
+                        let yellow_penguin_class_id = YellowPenguinClassId::<T>::get();
+                        let mut new_penguin = YellowPenguin {
+                            owner: new_penguin.owner,
+                            start: Default::default(),
+                            eat_count: 0u32,
+                            status: PenguinStatus::Active,
+                            pre_eat_at: block_number,
+                            eggs: Default::default(),
+                            asset_id: id,
+                            class_id: yellow_penguin_class_id,
+                            incubation_remain: Default::default(),
+                        };
+                        Penguins::<T>::remove(class_id, token_id);
+                        SmallYellowPenguinCount::<T>::mutate(|value| *value = *value - 1);
+                        Penguins::<T>::insert(
+                            class_id,
+                            id,
+                            PenguinFarmOf::<T>::YellowPenguin(new_penguin),
+                        );
+                        OwnerYellowPenguin::<T>::mutate(owner, |ids| {
+                            ids.push(id);
+                        });
+                        YellowPenguinCount::<T>::mutate(|value| *value = *value + 1);
+                        Self::deposit_event(Event::<T>::PenguinUpgrade(
+                            class_id,
+                            token_id,
+                            yellow_penguin_class_id,
+                            id,
+                        ));
+                    } else {
+                        new_penguin.eat_count = eat_count.add(&1u32);
+                        new_penguin.pre_eat_at = block_number;
+                        new_penguin.grow_value = grow_value.add(T::PenguinProducePeriod::get());
+                        Penguins::<T>::mutate(class_id, token_id, |penguin| {
+                            sp_std::mem::swap(
+                                penguin,
+                                &mut Some(PenguinFarmOf::<T>::SmallYellowPenguin(new_penguin)),
+                            );
+                        });
+                        Self::deposit_event(Event::<T>::FeedPenguinSuccess(class_id, token_id));
+                    }
+                }
+            }
+
+            Ok(Pays::No.into())
+        }
+        #[pallet::weight(0)]
+        pub fn remove_male_penguin(
+            origin: OriginFor<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            #[pallet::compact] token_id: TokenIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_none(origin)?;
+			let penguin=Penguins::<T>::take(class_id,token_id).ok_or(Error::<T>::PenguinNoExist)?;
+			match penguin{
+				PenguinFarm::RedPenguin(_)|PenguinFarm::YellowPenguin(_)|PenguinFarm::SmallYellowPenguin(_)=>{},
+				PenguinFarm::MalePenguin(MalePenguin{owner,..})=>{
+                  OwnerMalePenguin::<T>::mutate(&owner,|ids|{
+					  ids.binary_search(&token_id).map(|index|{
+						  ids.remove(index);
+					  });
+				  });
+					MalePenguinCount::<T>::mutate(|value|*value=*value-1);
+				}
+			}
+            Ok(Pays::No.into())
         }
 
         ///孵化企鹅
         #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[transactional]
         pub fn incubation_penguin(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+            let amount = <T as Config>::Currency::total_balance(&caller);
+            let block_number = frame_system::Pallet::<T>::current_block_number();
+            ensure!(amount > One::one(), Error::<T>::IncubationBalanceNoEnough);
+            let incubation_class_id = IncubationCouponClassId::<T>::get();
+            let low_incubation_class_id = LowIncubationCouponClassId::<T>::get();
+            match class_id {
+                 b @ n if b==incubation_class_id => {
+                    let coupon = IncubationCoupons::<T>::get(class_id, token_id)
+                        .ok_or(Error::<T>::IncubationCouponNoExist)?;
+                    ensure!(
+                        block_number < coupon.start + T::IncubationLivePeriod::get(),
+                        Error::<T>::IncubationCouponExpire
+                    );
+                    //销毁一个企鹅蛋
+                    <T as Config>::Currency::withdraw(
+                        &caller,
+                        One::one(),
+                        WithdrawReasons::FEE,
+                        ExistenceRequirement::KeepAlive,
+                    )?;
+                    //销毁孵化劵
+                    IncubationCoupons::<T>::remove(class_id, token_id);
+                    OwnerIncubationCouponAsset::<T>::mutate(&caller, |ids| {
+                        ids.binary_search(&token_id).map(|index| ids.remove(index))
+                    }).map_err(|_|Error::<T>::RemoveCouponError)?;
+
+                    //生成一个小黄企鹅
+                    let id = Self::get_next_small_yellow_id()?;
+                    let small_yellow_class_id = SmallYellowPenguinClassId::<T>::get();
+                    Penguins::<T>::insert(
+                        small_yellow_class_id,
+                        id,
+                        PenguinFarmOf::<T>::SmallYellowPenguin(SmallYellowPenguin {
+                            owner: caller.clone(),
+                            start: block_number,
+                            pre_eat_at: block_number,
+                            eat_count: 0,
+                            status: PenguinStatus::Active,
+                            asset_id: id,
+                            class_id: small_yellow_class_id,
+                            grow_value: Default::default(),
+                        }),
+                    );
+                    OwnerSmallYellowPenguin::<T>::mutate(&caller, |ids| ids.push(id));
+                    SmallYellowPenguinCount::<T>::mutate(|value| *value = *value + 1);
+                    //计算公企鹅概率
+                    let payload = (T::Randomness::random_seed(), token_id);
+                    let mut h = payload.using_encoded(<T as frame_system::Config>::Hashing::hash);
+                    let  dna: &mut [u8] = h.as_mut();
+                    let b = <[u8; 4]>::try_from(&dna[0..4])
+                        .map_err(|_| Error::<T>::NoAvailableClassId)?;
+                    let n = <u32>::from_le_bytes(b);
+                    log::info!("random number {}", n);
+                    if n % 1000u32 < 200u32 {
+                        let id = Self::get_next_male_id()?;
+                        let male_class_id = MalePenguinClassId::<T>::get();
+                        Penguins::<T>::insert(
+                            male_class_id,
+                            id,
+                            PenguinFarmOf::<T>::MalePenguin(MalePenguin {
+                                owner: caller.clone(),
+                                start: block_number,
+                                pre_eat_at: block_number,
+                                eat_count: 0u32,
+                                eggs: Default::default(),
+                                status: PenguinStatus::Active,
+                                asset_id: id,
+                                class_id: male_class_id,
+                                incubation_remain: Zero::zero(),
+                            }),
+                        );
+                        OwnerMalePenguin::<T>::mutate(&caller, |ids| ids.push(id));
+
+                        MalePenguinCount::<T>::mutate(|value| *value = *value + 1);
+
+                        // let call = IsSubType::<<T as pallet::Config>::Call>::is_sub_type(&Call::<T>::remove_male_penguin{class_id:male_class_id,token_id:id}).ok_or(Error::<T>::NoAvailableClassId)?;
+                        T::Schedule::schedule(
+                            DispatchTime::After(T::MalePenguinLifeSpan::get()),
+                            None,
+                            MalePenguinCount::<T>::get() as u8,
+                            frame_system::RawOrigin::None.into(),
+                            Call::<T>::remove_male_penguin {
+                                class_id: male_class_id,
+                                token_id: id,
+                            }
+                            .into(),
+                        );
+                    }
+                }
+				b @ n if b==low_incubation_class_id  => {
+                    let coupon = LowIncubationCoupons::<T>::get(class_id, token_id)
+                        .ok_or(Error::<T>::IncubationCouponNoExist)?;
+                    ensure!(
+                        block_number < coupon.start + T::IncubationLivePeriod::get(),
+                        Error::<T>::IncubationCouponExpire
+                    );
+                    //销毁一个企鹅蛋
+                    <T as Config>::Currency::withdraw(
+                        &caller,
+                        One::one(),
+                        WithdrawReasons::FEE,
+                        ExistenceRequirement::KeepAlive,
+                    )?;
+                    //销毁孵化劵
+                    LowIncubationCoupons::<T>::remove(class_id, token_id);
+                    OwnerIncubationCouponAsset::<T>::mutate(&caller, |ids| {
+                        ids.binary_search(&token_id).map(|index| ids.remove(index))
+                    });
+
+                    //生成一个小黄企鹅
+                    let id = Self::get_next_small_yellow_id()?;
+                    let small_yellow_class_id = SmallYellowPenguinClassId::<T>::get();
+                    Penguins::<T>::insert(
+                        small_yellow_class_id,
+                        id,
+                        PenguinFarmOf::<T>::SmallYellowPenguin(SmallYellowPenguin {
+                            owner: caller.clone(),
+                            start: block_number,
+                            pre_eat_at: block_number,
+                            eat_count: 0,
+                            status: PenguinStatus::Active,
+                            asset_id: id,
+                            class_id: small_yellow_class_id,
+                            grow_value: Default::default(),
+                        }),
+                    );
+                    OwnerSmallYellowPenguin::<T>::mutate(&caller, |ids| ids.push(id));
+                }
+                _ => Err(Error::<T>::IncubationCouponClassError)?,
+            };
+
             Ok(().into())
         }
 
-        ///交易企鹅
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn transfor_penguin(
+        ///购买企鹅
+        /// 企鹅必须在挂单
+        /// 企鹅购买金额必须大于手续费加企鹅价格
+        /// 购买成功之后必须unbid
+        #[pallet::weight(10_00 + T::DbWeight::get().writes(1))]
+        #[transactional]
+        pub fn purchase_penguin(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+            let penguin =
+                Penguins::<T>::get(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
+            match &penguin {
+                PenguinFarm::RedPenguin(red_penguin) => {
+                    purchase_penguin!(
+                        red_penguin,
+                        RedPenguin,
+                        OwnerRedPenguin,
+                        caller,
+                        class_id,
+                        token_id,
+                        penguin
+                    )
+                }
+                PenguinFarm::YellowPenguin(yellow_penguin) => {
+                    purchase_penguin!(
+                        yellow_penguin,
+                        YellowPenguin,
+                        OwnerYellowPenguin,
+                        caller,
+                        class_id,
+                        token_id,
+                        penguin
+                    )
+                }
+                PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
+                    purchase_penguin!(
+                        small_yellow_penguin,
+                        SmallYellowPenguin,
+                        OwnerSmallYellowPenguin,
+                        caller,
+                        class_id,
+                        token_id,
+                        penguin
+                    )
+                }
+                PenguinFarm::MalePenguin(_) => {}
+            }
+
             Ok(().into())
         }
 
         ///挂拍卖 当天喂养次数清除，
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(10_00 + T::DbWeight::get().writes(1))]
+        #[transactional]
         pub fn bid(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
+            #[pallet::compact] price: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-			let caller =ensure_signed(origin)?;
+            let caller = ensure_signed(origin)?;
             let penguin =
                 Penguins::<T>::get(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
 
@@ -1137,77 +1989,92 @@ pub mod pallet {
                     return Err(Error::<T>::MalePenguinBanBid)?
                 }
                 PenguinFarm::RedPenguin(red_penguin) => {
-                    bid_penguin!(red_penguin, RedPenguin, class_id, token_id,caller)
+                    bid_penguin!(red_penguin, RedPenguin, class_id, token_id, caller, false)
                 }
                 PenguinFarm::YellowPenguin(yellow_penguin) => {
-                    bid_penguin!(yellow_penguin, YellowPenguin, class_id, token_id,caller)
-                }
-                PenguinFarm::SmallYellowPenguin(small_yellow) => {
-                    bid_penguin!(small_yellow, SmallYellowPenguin, class_id, token_id,caller)
-                }
-            }
-            Self::deposit_event(Event::<T>::Bid(class_id, token_id));
-
-            Ok(().into())
-        }
-
-        ///取消拍卖 ，
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-        pub fn unbid(
-            origin: OriginFor<T>,
-            #[pallet::compact] class_id: ClassIdOf<T>,
-            #[pallet::compact] token_id: TokenIdOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            let caller = ensure_signed(origin)?;
-            let penguin =Penguins::<T>::get(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
-
-            match penguin {
-                PenguinFarm::MalePenguin(MalePenguin { .. }) => {
-                    return Err(Error::<T>::MalePenguinBanBid)?
-                }
-                PenguinFarm::RedPenguin(red_penguin) => {
-					unbid_penguin!(
-						red_penguin,
-						RedPenguin,
-						class_id,
-						token_id,
-						caller,
-						false
-					);
-                }
-                PenguinFarm::YellowPenguin(yellow_penguin) => {
-                    unbid_penguin!(
+                    bid_penguin!(
                         yellow_penguin,
                         YellowPenguin,
+                        class_id,
+                        token_id,
+                        caller,
+                        T::YellowPenguinDeadPeriod::get(),
+                        OwnerYellowPenguin
+                    )
+                }
+                PenguinFarm::SmallYellowPenguin(small_yellow) => {
+                    bid_penguin!(
+                        small_yellow,
+                        SmallYellowPenguin,
                         class_id,
                         token_id,
                         caller,
                         true
                     );
                 }
-                PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
-                    unbid_penguin!(
-                        small_yellow_penguin,
-                        SmallYellowPenguin,
-                        class_id,
-                        &token_id,
-                        caller,
-                        false
-                    );
-                }
             }
-            Self::deposit_event(Event::<T>::UnBid(class_id, token_id));
+
+            BidPenguin::<T>::insert((class_id, token_id), price);
+            Self::deposit_event(Event::<T>::Bid(class_id, token_id));
+
+            Ok(().into())
+        }
+
+        ///取消拍卖 ，
+        #[pallet::weight(10_00 + T::DbWeight::get().writes(1))]
+        pub fn unbid(
+            origin: OriginFor<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            #[pallet::compact] token_id: TokenIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+            let penguin =
+                Penguins::<T>::get(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
+            Self::inner_unbid(penguin, caller, class_id, token_id)?;
             Ok(().into())
         }
     }
 }
 
-impl<T: Config> Pallet<T>
-where
-    <<T as pallet::Config>::Currency as frame_support::traits::Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance: From<u128>,
-{
+impl<T: Config> Pallet<T> {
+    pub fn inner_unbid(
+        penguin: PenguinFarmOf<T>,
+        caller: AccountIdOf<T>,
+        class_id: ClassIdOf<T>,
+        token_id: TokenIdOf<T>,
+    ) -> Result<(), DispatchError> {
+        match penguin {
+            PenguinFarm::MalePenguin(MalePenguin { .. }) => {
+                return Err(Error::<T>::MalePenguinBanBid)?
+            }
+            PenguinFarm::RedPenguin(red_penguin) => {
+                unbid_penguin!(red_penguin, RedPenguin, class_id, token_id, caller, false);
+            }
+            PenguinFarm::YellowPenguin(yellow_penguin) => {
+                unbid_penguin!(
+                    yellow_penguin,
+                    YellowPenguin,
+                    class_id,
+                    token_id,
+                    caller,
+                    true
+                );
+            }
+            PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
+                unbid_penguin!(
+                    small_yellow_penguin,
+                    SmallYellowPenguin,
+                    class_id,
+                    &token_id,
+                    caller,
+                    false
+                );
+            }
+        }
+        BidPenguin::<T>::remove((class_id, token_id));
+        Self::deposit_event(Event::<T>::UnBid(class_id, token_id));
+        Ok(())
+    }
     pub fn compute_produce_egg_rate(penguin: &PenguinFarmOf<T>) -> BalanceOf<T> {
         match penguin {
             PenguinFarm::RedPenguin(_) => {
@@ -1320,28 +2187,14 @@ where
         })
     }
     pub fn query_red_penguin_num() -> BalanceOf<T> {
-        let count = Penguins::<T>::iter_prefix_values(RedPenguinClassId::<T>::get())
-            .map(|_| 1u32)
-            .sum::<u32>();
-        count.into()
-    }
-
-    pub fn query_all_penguin_num() -> BalanceOf<T> {
-        let count = Penguins::<T>::iter().map(|_| 1u32).sum::<u32>();
-        count.into()
+        s!(20000u128)
     }
 
     pub fn query_yellow_penguin_num() -> BalanceOf<T> {
-        let count = Penguins::<T>::iter_prefix_values(YellowPenguinClassId::<T>::get())
-            .map(|_| 1u32)
-            .sum::<u32>();
-        count.into()
+        s!(YellowPenguinCount::<T>::get())
     }
 
     pub fn query_male_penguin_num() -> BalanceOf<T> {
-        let count = Penguins::<T>::iter_prefix_values(MalePenguinClassId::<T>::get())
-            .map(|_| 1u32)
-            .sum::<u32>();
-        count.into()
+        s!(MalePenguinCount::<T>::get())
     }
 }
