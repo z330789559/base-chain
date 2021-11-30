@@ -528,7 +528,7 @@ parameter_types! {
     pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
     pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
     pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
-	//14 days
+    //14 days
     pub const SmallYellowPenguinLockPeriod: BlockNumber = 14 * DAYS;
     pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
     pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
