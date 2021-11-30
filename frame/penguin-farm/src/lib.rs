@@ -134,23 +134,13 @@ macro_rules! bid_penguin {
             ..
         } = $e;
         ensure!($caller == owner.clone(), Error::<T>::NoPermission);
-		if current_block - pre_eat_at >= $death_period {
-
-		 Penguins::<T>::remove($class_id,$token_id);
-			    $penguin_owner::<T>::try_mutate(&owner,|ids|{
-							ids.binary_search(&$token_id).map(|index|{
-								ids.remove(index)
-							})
-						 });
-			 Self::deposit_event(Event::<T>::PenguinDead($class_id,$token_id));
-		}else{
-
+		ensure!(current_block - pre_eat_at >= $death_period - T::BidMaxPeriod::get(),Error::<T>::PenguinNeedFeed);
 		ensure!(PenguinStatus::Active ==status ||PenguinStatus::Hunger ==status,  Error::<T>::PenguinStatusError );
         new_penguin.status = PenguinStatus::Bid;
-        ensure!(eat_count == 0u32, Error::<T>::NeedClaimPenguinEgg);
         if new_penguin.pre_eat_at < T::PenguinProducePeriod::get()   {
 			if current_block  >   T::PenguinProducePeriod::get(){
 				     new_penguin.pre_eat_at = current_block - T::PenguinProducePeriod::get();
+				     new_penguin.eat_count=0;
 			}else{
 				new_penguin.pre_eat_at = Zero::zero();
 			}
@@ -171,7 +161,7 @@ macro_rules! bid_penguin {
                                     Ok(old_value)
                                 },
                             );
-	   }
+
     }};
 }
 
@@ -401,7 +391,7 @@ pub use pallet::*;
 pub mod pallet {
     use super::*;
     use crate::weights::WeightInfo;
-    use frame_support::dispatch::Dispatchable;
+    use frame_support::dispatch::{Dispatchable, HasCompact};
     use frame_support::sp_runtime::traits::{
         AtLeast32BitUnsigned, BlockNumberProvider, Saturating, UniqueSaturatedInto,
     };
@@ -417,8 +407,9 @@ pub mod pallet {
     use frame_system::pallet_prelude::OriginFor;
     use frame_system::{ensure_none, ensure_root, ensure_signed};
     use sp_runtime::traits::Hash;
+	use primitive::{BlockNumber, DAYS};
 
-    #[pallet::config]
+	#[pallet::config]
     pub trait Config:
         frame_system::Config + pallet_assets::Config + pallet_scheduler::Config
     {
@@ -433,6 +424,7 @@ pub mod pallet {
             + MaxEncodedLen
             + Default
             + Member
+		     +HasCompact
             + Parameter
             + From<u32>
             + Into<u32>
@@ -447,6 +439,7 @@ pub mod pallet {
             + AtLeast32BitUnsigned
             + Default
             + Copy
+		    +HasCompact
             + From<u32>
             + Into<u32>
             + MaybeSerializeDeserialize;
@@ -456,6 +449,7 @@ pub mod pallet {
             + AtLeast32BitUnsigned
             + Default
             + Copy
+		+HasCompact
             + From<u64>
             + Into<u64>
             + MaybeSerializeDeserialize;
@@ -518,9 +512,9 @@ pub mod pallet {
         #[pallet::constant]
         type OperationPenguinEggRate: Get<Permill>;
 
-        ///运营团队当前分配比率
-        #[pallet::constant]
-        type MalePenguinRate: Get<Permill>;
+        // ///运营团队当前分配比率
+        // #[pallet::constant]
+        // type MalePenguinRate: Get<Permill>;
 
         ///企鹅产蛋间隔时间
         #[pallet::constant]
@@ -597,6 +591,12 @@ pub mod pallet {
     /// Error for non-fungible-token module.
     #[pallet::error]
     pub enum Error<T> {
+		///超过最大数量限制
+		MaxNumberLimit,
+		///不支持迁入
+		NoSupportMoveIn,
+		///企鹅需要喂养
+		PenguinNeedFeed,
 		///移除TokenId错误
 		RemoveTokenIdError,
         ///移除公企鹅id错误
@@ -723,7 +723,7 @@ pub mod pallet {
     #[pallet::getter(fn yellow_penguin_count)]
     pub type YellowPenguinCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-    ///黄企鹅数量
+    ///小黄企鹅数量
     #[pallet::storage]
     #[pallet::getter(fn small_yellow_penguin_count)]
     pub type SmallYellowPenguinCount<T: Config> = StorageValue<_, u32, ValueQuery>;
@@ -797,6 +797,12 @@ pub mod pallet {
     #[pallet::getter(fn next_incubation_token_id)]
     pub type IncubationTokenId<T: Config> = StorageValue<_, TokenIdOf<T>, ValueQuery>;
 
+
+	///高级孵化劵当前id
+	#[pallet::storage]
+	#[pallet::getter(fn next_low_ncubation_token_id)]
+	pub type LowIncubationTokenId<T: Config> = StorageValue<_, TokenIdOf<T>, ValueQuery>;
+
     ///公企鹅类别id
     #[pallet::storage]
     #[pallet::getter(fn male_penguin_class_id)]
@@ -857,22 +863,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    ///待发放企鹅蛋数量明细
-    #[pallet::storage]
-    #[pallet::getter(fn pending_balance)]
-    pub type PendingBalance<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
-
-    ///待发放高级孵化劵数量明细
-    #[pallet::storage]
-    #[pallet::getter(fn pending_incubation)]
-    pub type PendingIncubationCoupons<T: Config> =
-        StorageMap<_, Twox64Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
-
-    ///上一次发蛋时间
-    #[pallet::storage]
-    #[pallet::getter(fn prev_preduce_egg_time)]
-    pub type PrevProduceEggTime<T: Config> = StorageValue<_, u64, ValueQuery>;
 
     ///系统地址，类拥有着地址，冷库地址，劵地址
     #[pallet::storage]
@@ -918,35 +908,12 @@ pub mod pallet {
     pub(super) type Admin<T: Config> = StorageValue<_, Vec<AccountIdOf<T>>, ValueQuery>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
-        pub red_penguin: Vec<(AccountIdOf<T>, PenguinConfigOf<T>, usize)>,
-        pub yellow_penguin: Vec<(AccountIdOf<T>, PenguinConfigOf<T>, usize)>,
-        pub small_yellow_penguin: Vec<(AccountIdOf<T>, PenguinConfigOf<T>, usize)>,
-        pub male_penguin: Vec<(AccountIdOf<T>, PenguinConfigOf<T>, usize)>,
-        pub init_per_day_supply: BalanceOf<T>,
-        pub incubation_coupon_asset: Vec<(AccountIdOf<T>, IncubationCouponOf<T>, usize)>,
-        pub low_incubation_coupon_asset: Vec<(AccountIdOf<T>, IncubationCouponOf<T>, usize)>,
-        pub prev_produce_time: u64,
-    }
+	#[derive(Default)]
+	pub struct GenesisConfig {}
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            GenesisConfig {
-                red_penguin: Default::default(),
-                yellow_penguin: Default::default(),
-                small_yellow_penguin: Default::default(),
-                male_penguin: Default::default(),
-                incubation_coupon_asset: Default::default(),
-                init_per_day_supply: Default::default(),
-                low_incubation_coupon_asset: Default::default(),
-                prev_produce_time: 0u64,
-            }
-        }
-    }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
+    impl<T: Config> GenesisBuild<T> for GenesisConfig
     where
         <<T as pallet::Config>::Currency as frame_support::traits::Currency<
             <T as frame_system::Config>::AccountId,
@@ -959,6 +926,7 @@ pub mod pallet {
             MakeTokenId::<T>::set(7000000u32.into());
 
             IncubationTokenId::<T>::set(9000000u32.into());
+			LowIncubationTokenId::<T>::set(10000000u32.into());
             SystemAddress::<T>::set((
                 <Pallet<T>>::class_owner_id(),
                 <Pallet<T>>::cold_storage_owner_id(),
@@ -983,12 +951,12 @@ pub mod pallet {
                 <Pallet<T>>::get_next_class_id().expect("class id get error"),
             );
 
-            let red_penguin_class_id = RedPenguinClassId::<T>::get();
-            let yellow_penguin_class_id = YellowPenguinClassId::<T>::get();
-            let small_yellow_penguin_class_id = SmallYellowPenguinClassId::<T>::get();
-            let male_penguin_class_id = MalePenguinClassId::<T>::get();
-            let incubation_coupon_class_id = IncubationCouponClassId::<T>::get();
-            let low_incubation_coupon_class_id = LowIncubationCouponClassId::<T>::get();
+            // let red_penguin_class_id = RedPenguinClassId::<T>::get();
+            // let yellow_penguin_class_id = YellowPenguinClassId::<T>::get();
+            // let small_yellow_penguin_class_id = SmallYellowPenguinClassId::<T>::get();
+            // let male_penguin_class_id = MalePenguinClassId::<T>::get();
+            // let incubation_coupon_class_id = IncubationCouponClassId::<T>::get();
+            // let low_incubation_coupon_class_id = LowIncubationCouponClassId::<T>::get();
 
             let block: u128 = s!(T::InitSupplyPeriod::get());
             let eggs_per_day = T::InitTotalSupply::get()
@@ -1003,210 +971,237 @@ pub mod pallet {
             RedPenguinProduceRate::<T>::set(T::RedPenguinEggRate::get() * eggs_per_day);
             YellowPenguinProduceRate::<T>::set(T::YellowPenguinEggRate::get() * eggs_per_day);
             MalePenguinProduceRate::<T>::set(T::MalePenguinEggRate::get() * eggs_per_day);
-            PrevProduceEggTime::<T>::set(self.prev_produce_time);
-            let mut remain_supply: BalanceOf<T> = Default::default();
-            let current_block = frame_system::Pallet::<T>::current_block_number();
-            self.red_penguin
-                .clone()
-                .into_iter()
-                .for_each(|(account_id, penguin_of, count)| {
-                    let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
-
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_red_id().expect("token id get error");
-                        Penguins::<T>::insert(
-                            red_penguin_class_id,
-                            id,
-                            PenguinFarmOf::<T>::RedPenguin(RedPenguin {
-                                owner: account_id.clone(),
-                                start: penguin_of.start,
-                                pre_eat_at: current_block,
-                                status: penguin_of.status,
-                                eggs: penguin_of.eggs,
-                                asset_id: id,
-                                eat_count: 0u32,
-                                class_id: red_penguin_class_id,
-                                incubation_remain: Default::default(),
-                            }),
-                        );
-                        remain_supply = remain_supply + penguin_of.eggs;
-                        penguin_ids.push(id);
-                    }
-
-                    let _: Result<_, DispatchError> =
-                        OwnerRedPenguin::<T>::try_mutate(account_id, |red_penguin| {
-                            red_penguin.extend(penguin_ids.into_iter());
-                            Ok(())
-                        });
-                });
-
-            self.yellow_penguin
-                .clone()
-                .into_iter()
-                .for_each(|(account_id, penguin_of, count)| {
-                    let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
-
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
-                        Penguins::<T>::insert(
-                            yellow_penguin_class_id,
-                            id,
-                            PenguinFarmOf::<T>::YellowPenguin(YellowPenguin {
-                                owner: account_id.clone(),
-                                start: penguin_of.start,
-                                pre_eat_at: current_block,
-                                status: penguin_of.status,
-                                eggs: penguin_of.eggs,
-                                eat_count: 0u32,
-                                asset_id: id,
-                                class_id: yellow_penguin_class_id,
-                                incubation_remain: Default::default(),
-                            }),
-                        );
-                        remain_supply = remain_supply + penguin_of.eggs;
-                        penguin_ids.push(id);
-                    }
-                    let _: Result<_, DispatchError> =
-                        OwnerYellowPenguin::<T>::try_mutate(account_id, |yellow_penguin| {
-                            yellow_penguin.extend(penguin_ids.into_iter());
-                            Ok(())
-                        });
-                });
-
-            self.small_yellow_penguin.clone().into_iter().for_each(
-                |(account_id, penguin_of, count)| {
-                    let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
-
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
-                        Penguins::<T>::insert(
-                            small_yellow_penguin_class_id,
-                            id,
-                            PenguinFarmOf::<T>::SmallYellowPenguin(SmallYellowPenguin {
-                                owner: account_id.clone(),
-                                start: penguin_of.start,
-                                pre_eat_at: current_block,
-                                status: penguin_of.status,
-                                asset_id: id,
-                                eat_count: 0u32,
-                                class_id: small_yellow_penguin_class_id,
-                                grow_value: Default::default(),
-                            }),
-                        );
-                        penguin_ids.push(id);
-                    }
-                    let _: Result<_, DispatchError> = OwnerSmallYellowPenguin::<T>::try_mutate(
-                        account_id,
-                        |small_yellow_penguin| {
-                            small_yellow_penguin.extend(penguin_ids.into_iter());
-                            Ok(())
-                        },
-                    );
-                },
-            );
-
-            self.male_penguin
-                .clone()
-                .into_iter()
-                .for_each(|(account_id, penguin_of, count)| {
-                    let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
-
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
-                        Penguins::<T>::insert(
-                            male_penguin_class_id,
-                            id,
-                            PenguinFarmOf::<T>::MalePenguin(MalePenguin {
-                                owner: account_id.clone(),
-                                start: penguin_of.start,
-                                pre_eat_at: current_block,
-                                eggs: penguin_of.eggs,
-                                status: penguin_of.status,
-                                eat_count: 0u32,
-                                asset_id: id,
-                                class_id: male_penguin_class_id,
-                                incubation_remain: Default::default(),
-                            }),
-                        );
-                        remain_supply = remain_supply + penguin_of.eggs;
-                        penguin_ids.push(id);
-                    }
-                    let _: Result<_, DispatchError> =
-                        OwnerMalePenguin::<T>::try_mutate(account_id, |male_penguin| {
-                            male_penguin.extend(penguin_ids.into_iter());
-                            Ok(())
-                        });
-                });
-
-            self.incubation_coupon_asset.clone().into_iter().for_each(
-                |(account_id, incubation_coupon_of, count)| {
-                    let mut incubation_ids: Vec<TokenIdOf<T>> = vec![];
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_incubation_id().expect("token id get error");
-                        IncubationCoupons::<T>::insert(
-                            male_penguin_class_id,
-                            id,
-                            IncubationCouponOf::<T> {
-                                owner: account_id.clone(),
-                                start: incubation_coupon_of.start,
-                                status: incubation_coupon_of.status,
-                                asset_id: id,
-                                class_id: incubation_coupon_class_id,
-                            },
-                        );
-                        incubation_ids.push(id);
-                    }
-                    let _: Result<_, DispatchError> =
-                        OwnerIncubationCouponAsset::<T>::try_mutate(account_id, |incubation| {
-                            incubation.extend(incubation_ids.into_iter());
-                            Ok(())
-                        });
-                },
-            );
-
-            self.low_incubation_coupon_asset
-                .clone()
-                .into_iter()
-                .for_each(|(account_id, incubation_coupon_of, count)| {
-                    let mut incubation_ids: Vec<TokenIdOf<T>> = vec![];
-
-                    for _ in 0..count {
-                        let id = <Pallet<T>>::get_next_incubation_id().expect("token id get error");
-                        IncubationCoupons::<T>::insert(
-                            male_penguin_class_id,
-                            id,
-                            IncubationCouponOf::<T> {
-                                owner: account_id.clone(),
-                                start: incubation_coupon_of.start,
-                                status: incubation_coupon_of.status,
-                                asset_id: id,
-                                class_id: low_incubation_coupon_class_id,
-                            },
-                        );
-                        incubation_ids.push(id);
-                    }
-                    let _: Result<_, DispatchError> =
-                        OwnerIncubationCouponAsset::<T>::try_mutate(account_id, |incubation| {
-                            incubation.extend(incubation_ids.into_iter());
-                            Ok(())
-                        });
-                });
+            // PrevProduceEggTime::<T>::set(self.prev_produce_time);
+            // let mut remain_supply: BalanceOf<T> = Default::default();
+            // let current_block = frame_system::Pallet::<T>::current_block_number();
+            // self.red_penguin
+            //     .clone()
+            //     .into_iter()
+            //     .for_each(|(account_id, penguin_of, count)| {
+            //         let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
+			//
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_red_id().expect("token id get error");
+            //             Penguins::<T>::insert(
+            //                 red_penguin_class_id,
+            //                 id,
+            //                 PenguinFarmOf::<T>::RedPenguin(RedPenguin {
+            //                     owner: account_id.clone(),
+            //                     start: penguin_of.start,
+            //                     pre_eat_at: current_block,
+            //                     status: penguin_of.status,
+            //                     eggs: penguin_of.eggs,
+            //                     asset_id: id,
+            //                     eat_count: 0u32,
+            //                     class_id: red_penguin_class_id,
+            //                     incubation_remain: Default::default(),
+            //                 }),
+            //             );
+            //             remain_supply = remain_supply + penguin_of.eggs;
+            //             penguin_ids.push(id);
+            //         }
+			//
+            //         let _: Result<_, DispatchError> =
+            //             OwnerRedPenguin::<T>::try_mutate(account_id, |red_penguin| {
+            //                 red_penguin.extend(penguin_ids.into_iter());
+            //                 Ok(())
+            //             });
+            //     });
+			//
+            // self.yellow_penguin
+            //     .clone()
+            //     .into_iter()
+            //     .for_each(|(account_id, penguin_of, count)| {
+            //         let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
+			//
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
+            //             Penguins::<T>::insert(
+            //                 yellow_penguin_class_id,
+            //                 id,
+            //                 PenguinFarmOf::<T>::YellowPenguin(YellowPenguin {
+            //                     owner: account_id.clone(),
+            //                     start: penguin_of.start,
+            //                     pre_eat_at: current_block,
+            //                     status: penguin_of.status,
+            //                     eggs: penguin_of.eggs,
+            //                     eat_count: 0u32,
+            //                     asset_id: id,
+            //                     class_id: yellow_penguin_class_id,
+            //                     incubation_remain: Default::default(),
+            //                 }),
+            //             );
+            //             remain_supply = remain_supply + penguin_of.eggs;
+            //             penguin_ids.push(id);
+            //         }
+            //         let _: Result<_, DispatchError> =
+            //             OwnerYellowPenguin::<T>::try_mutate(account_id, |yellow_penguin| {
+            //                 yellow_penguin.extend(penguin_ids.into_iter());
+            //                 Ok(())
+            //             });
+            //     });
+			//
+            // self.small_yellow_penguin.clone().into_iter().for_each(
+            //     |(account_id, penguin_of, count)| {
+            //         let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
+			//
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
+            //             Penguins::<T>::insert(
+            //                 small_yellow_penguin_class_id,
+            //                 id,
+            //                 PenguinFarmOf::<T>::SmallYellowPenguin(SmallYellowPenguin {
+            //                     owner: account_id.clone(),
+            //                     start: penguin_of.start,
+            //                     pre_eat_at: current_block,
+            //                     status: penguin_of.status,
+            //                     asset_id: id,
+            //                     eat_count: 0u32,
+            //                     class_id: small_yellow_penguin_class_id,
+            //                     grow_value: Default::default(),
+            //                 }),
+            //             );
+            //             penguin_ids.push(id);
+            //         }
+            //         let _: Result<_, DispatchError> = OwnerSmallYellowPenguin::<T>::try_mutate(
+            //             account_id,
+            //             |small_yellow_penguin| {
+            //                 small_yellow_penguin.extend(penguin_ids.into_iter());
+            //                 Ok(())
+            //             },
+            //         );
+            //     },
+            // );
+			//
+            // self.male_penguin
+            //     .clone()
+            //     .into_iter()
+            //     .for_each(|(account_id, penguin_of, count)| {
+            //         let mut penguin_ids: Vec<TokenIdOf<T>> = vec![];
+			//
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_yellow_id().expect("token id get error");
+            //             Penguins::<T>::insert(
+            //                 male_penguin_class_id,
+            //                 id,
+            //                 PenguinFarmOf::<T>::MalePenguin(MalePenguin {
+            //                     owner: account_id.clone(),
+            //                     start: penguin_of.start,
+            //                     pre_eat_at: current_block,
+            //                     eggs: penguin_of.eggs,
+            //                     status: penguin_of.status,
+            //                     eat_count: 0u32,
+            //                     asset_id: id,
+            //                     class_id: male_penguin_class_id,
+            //                     incubation_remain: Default::default(),
+            //                 }),
+            //             );
+            //             remain_supply = remain_supply + penguin_of.eggs;
+            //             penguin_ids.push(id);
+            //         }
+            //         let _: Result<_, DispatchError> =
+            //             OwnerMalePenguin::<T>::try_mutate(account_id, |male_penguin| {
+            //                 male_penguin.extend(penguin_ids.into_iter());
+            //                 Ok(())
+            //             });
+            //     });
+			//
+            // self.incubation_coupon_asset.clone().into_iter().for_each(
+            //     |(account_id, incubation_coupon_of, count)| {
+            //         let mut incubation_ids: Vec<TokenIdOf<T>> = vec![];
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_incubation_id().expect("token id get error");
+            //             IncubationCoupons::<T>::insert(
+            //                 male_penguin_class_id,
+            //                 id,
+            //                 IncubationCouponOf::<T> {
+            //                     owner: account_id.clone(),
+            //                     start: incubation_coupon_of.start,
+            //                     status: incubation_coupon_of.status,
+            //                     asset_id: id,
+            //                     class_id: incubation_coupon_class_id,
+            //                 },
+            //             );
+            //             incubation_ids.push(id);
+            //         }
+            //         let _: Result<_, DispatchError> =
+            //             OwnerIncubationCouponAsset::<T>::try_mutate(account_id, |incubation| {
+            //                 incubation.extend(incubation_ids.into_iter());
+            //                 Ok(())
+            //             });
+            //     },
+            // );
+			//
+            // self.low_incubation_coupon_asset
+            //     .clone()
+            //     .into_iter()
+            //     .for_each(|(account_id, incubation_coupon_of, count)| {
+            //         let mut incubation_ids: Vec<TokenIdOf<T>> = vec![];
+			//
+            //         for _ in 0..count {
+            //             let id = <Pallet<T>>::get_next_incubation_id().expect("token id get error");
+            //             IncubationCoupons::<T>::insert(
+            //                 male_penguin_class_id,
+            //                 id,
+            //                 IncubationCouponOf::<T> {
+            //                     owner: account_id.clone(),
+            //                     start: incubation_coupon_of.start,
+            //                     status: incubation_coupon_of.status,
+            //                     asset_id: id,
+            //                     class_id: low_incubation_coupon_class_id,
+            //                 },
+            //             );
+            //             incubation_ids.push(id);
+            //         }
+            //         let _: Result<_, DispatchError> =
+            //             OwnerIncubationCouponAsset::<T>::try_mutate(account_id, |incubation| {
+            //                 incubation.extend(incubation_ids.into_iter());
+            //                 Ok(())
+            //             });
+            //     });
         }
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberOf<T>> for Pallet<T>
-    // where
-    //     <<T as pallet::Config>::Currency as frame_support::traits::Currency<
-    //         <T as frame_system::Config>::AccountId,
-    //     >>::Balance: From<u128>,
+    where
+        <<T as pallet::Config>::Currency as frame_support::traits::Currency<
+            <T as frame_system::Config>::AccountId,
+        >>::Balance: From<u128>,
     {
         fn on_finalize(now: T::BlockNumber) {
-            if now <= T::IncubationLivePeriod::get() {
-                return;
-            }
+            //纪元切换逻辑
+			//
+			let current_epoch =CurrentEpoch::<T>::get();
+			let end_point =CurrentEpochPeriod::<T>::get(current_epoch);
+			// 1 60月 2  35个月 3 18月 4。。 12隔越
+			if end_point  == now{
+				CurrentEpoch::<T>::set(current_epoch +1 );
+				let remain_balance= <T as Config>::InitTotalSupply::get() - <T as Config>::Currency::total_issuance();
+				CurrentEpochBalance::<T>::insert(current_epoch +1,remain_balance);
+				match current_epoch{
+					1u32=>{
+						let time = now + s!(DAYS * 35 * 30) ;
+						CurrentEpochPeriod::<T>::insert(current_epoch +1,time );
+					},
+					2u32=>{
+						let time = now + s!(DAYS * 18 * 30);
+						CurrentEpochPeriod::<T>::insert(current_epoch +1,time);
+					},
+					_=>{
+						let time = now + s!(DAYS * 12 * 30);
+						CurrentEpochPeriod::<T>::insert(current_epoch +1,time);
 
-            //修改企鹅状态(喂养时间，喂养状态)
+					},
+				}
+				let next_end_point= CurrentEpochPeriod::<T>::get(current_epoch +1);
+				let block: u128=s!(next_end_point - now);
+				let eggs_per_day =remain_balance.checked_div(&block.into()).expect("cal eggs_per_day error");
+				RedPenguinProduceRate::<T>::set(T::RedPenguinEggRate::get() * eggs_per_day);
+				YellowPenguinProduceRate::<T>::set(T::YellowPenguinEggRate::get() * eggs_per_day);
+				MalePenguinProduceRate::<T>::set(T::MalePenguinEggRate::get() * eggs_per_day);
+
+			}
         }
 
         fn on_initialize(now: T::BlockNumber) -> Weight {
@@ -1306,7 +1301,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResultWithPostInfo
+		{
             let caller = ensure_signed(origin)?;
 
             let penguin =
@@ -1317,6 +1313,8 @@ pub mod pallet {
                     || class_id == MalePenguinClassId::<T>::get(),
                 Error::<T>::PenguinIsSmallYellow
             );
+
+			//todo:
             ensure!(
                 PenguinStatus::Active == penguin.query_penguin_status(),
                 Error::<T>::PenguinStatusError
@@ -1341,7 +1339,7 @@ pub mod pallet {
                         block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
                         Error::<T>::PenguinProduceTooShort
                     );
-                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
+                    ensure!(*eat_count == 1, Error::<T>::PenguinEggHadClaim);
                     new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
                     let remain = penguin_produce_egg_rate + *incubation_remain;
                     //处理孵化劵张数，发放孵化劵
@@ -1351,10 +1349,10 @@ pub mod pallet {
                     new_penguin.incubation_remain = remain
                         .checked_rem(&T::RedPenguinEggCountForIncubation::get())
                         .ok_or(Error::<T>::IncubationRemainError)?;
-                    new_penguin.eggs = *eggs + penguin_produce_egg_rate;
+                    // new_penguin.eggs = *eggs + penguin_produce_egg_rate;
                     let incubation_coupon_class_id = IncubationCouponClassId::<T>::get();
                     let mut incubation_ids = sp_std::vec![];
-                    new_penguin.eat_count = 1;
+                    new_penguin.eat_count = 0;
                     let _: Vec<TokenIdOf<T>> = (0..incubation_count)
                         .filter_map(|_| {
                             let id: TokenIdOf<T> = <Pallet<T>>::get_next_incubation_id()
@@ -1426,8 +1424,8 @@ pub mod pallet {
                         block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
                         Error::<T>::PenguinProduceTooShort
                     );
-                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
-                    new_penguin.eat_count = 1;
+                    ensure!(*eat_count == 1, Error::<T>::PenguinEggHadClaim);
+                    new_penguin.eat_count = 0;
                     log::info!("产蛋数量 {:?}", penguin_produce_egg_rate);
                     new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
                     let remain = penguin_produce_egg_rate + *incubation_remain;
@@ -1445,7 +1443,7 @@ pub mod pallet {
 
                     let _: Vec<TokenIdOf<T>> = (0..incubation_count)
                         .filter_map(|_| {
-                            let id: TokenIdOf<T> = <Pallet<T>>::get_next_incubation_id()
+                            let id: TokenIdOf<T> = <Pallet<T>>::get_next_low_incubation_id()
                                 .map_err(|_| Error::<T>::IncubationTokenIdError)
                                 .ok()?;
                             incubation_ids.push(id);
@@ -1512,8 +1510,8 @@ pub mod pallet {
                         block_number >= *pre_eat_at + s!(T::PenguinProducePeriod::get()),
                         Error::<T>::PenguinProduceTooShort
                     );
-                    ensure!(*eat_count == 0, Error::<T>::PenguinEggHadClaim);
-                    new_penguin.eat_count = 1;
+                    ensure!(*eat_count == 1, Error::<T>::PenguinEggHadClaim);
+                    new_penguin.eat_count = 0;
                     log::info!("产蛋数量 {:?}", penguin_produce_egg_rate);
                     new_penguin.eggs = new_penguin.eggs + penguin_produce_egg_rate;
                     //发放企鹅蛋
@@ -1574,6 +1572,46 @@ pub mod pallet {
             Self::deposit_event(Event::AdminChanged(new));
             Ok(Pays::No.into())
         }
+        ///迁入企鹅
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn move_in(
+			origin: OriginFor<T>,
+			#[pallet::compact] class_id: ClassIdOf<T>,
+			to: AccountIdOf<T>
+		) -> DispatchResultWithPostInfo {
+			let caller = ensure_signed(origin)?;
+			ensure!(
+                <Admin<T>>::get().contains(&caller),
+                Error::<T>::NoPermission
+            );
+			Self::inner_move_in(class_id,to)?;
+			Ok(().into())
+		}
+
+
+		///批量迁入企鹅
+		#[pallet::weight(0)]
+		#[transactional]
+		pub fn batch_move_in(
+			origin: OriginFor<T>,
+			 class_ids: Vec<ClassIdOf<T>>,
+			to: AccountIdOf<T>
+		) -> DispatchResultWithPostInfo {
+			let caller = ensure_signed(origin)?;
+			ensure!(
+                <Admin<T>>::get().contains(&caller),
+                Error::<T>::NoPermission
+            );
+			ensure!(class_ids.len()<= 20,   Error::<T>::MaxNumberLimit);
+			class_ids.into_iter().filter_map(|class_id|{
+				Self::inner_move_in(class_id,to.clone()).ok()
+			});
+
+			Ok(().into())
+		}
+
+
 
         /// 喂养企鹅
         /// 系统喂养所以暂时不收手续费
@@ -1736,7 +1774,7 @@ pub mod pallet {
                             id,
                         ));
                     } else {
-                        new_penguin.eat_count = eat_count.add(&1u32);
+                        new_penguin.eat_count = 0;
                         new_penguin.pre_eat_at = block_number;
                         new_penguin.grow_value = grow_value.add(T::PenguinProducePeriod::get());
                         Penguins::<T>::mutate(class_id, token_id, |penguin| {
@@ -2037,6 +2075,61 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+
+	pub fn inner_move_in(class_id:ClassIdOf<T>,to:AccountIdOf<T>)-> Result<(), DispatchError> {
+		let red_class_id=RedPenguinClassId::<T>::get();
+		let yellow_class_id=YellowPenguinClassId::<T>::get();
+		let small_yellow_class_id=SmallYellowPenguinClassId::<T>::get();
+		ensure!(class_id==red_class_id||class_id==yellow_class_id||class_id==small_yellow_class_id,Error::<T>::NoSupportMoveIn);
+		let block_number = frame_system::Pallet::<T>::current_block_number();
+		if class_id==red_class_id{
+			let id =Self::get_next_red_id()?;
+			Penguins::<T>::insert(class_id,id,PenguinFarmOf::<T>::RedPenguin(RedPenguin{
+				owner: to.clone(),
+				start: block_number,
+				pre_eat_at: block_number,
+				eat_count: 0,
+				status: PenguinStatus::Active,
+				eggs:  Zero::zero(),
+				asset_id: id,
+				class_id: class_id,
+				incubation_remain: Zero::zero()
+			}));
+			OwnerRedPenguin::<T>::mutate(to,|ids|ids.push(id));
+
+		}else if class_id==yellow_class_id{
+
+			let id =Self::get_next_yellow_id()?;
+			Penguins::<T>::insert(class_id,id,PenguinFarmOf::<T>::YellowPenguin(YellowPenguin{
+				owner: to.clone(),
+				start: block_number,
+				pre_eat_at: block_number,
+				eat_count: 0,
+				status: PenguinStatus::Active,
+				eggs:  Zero::zero(),
+				asset_id: id,
+				class_id: yellow_class_id,
+				incubation_remain:  Zero::zero()
+			}));
+			OwnerYellowPenguin::<T>::mutate(to,|ids|ids.push(id));
+			YellowPenguinCount::<T>::mutate(|value|*value= *value +1);
+		}else{
+			let id =Self::get_next_small_yellow_id()?;
+			Penguins::<T>::insert(class_id,id,PenguinFarmOf::<T>::SmallYellowPenguin(SmallYellowPenguin{
+				owner: to.clone(),
+				start: block_number,
+				pre_eat_at: block_number,
+				eat_count: 0,
+				status: PenguinStatus::Active,
+				asset_id: id,
+				class_id: class_id,
+				grow_value: Default::default()
+			}));
+			OwnerSmallYellowPenguin::<T>::mutate(to,|ids|ids.push(id));
+			SmallYellowPenguinCount::<T>::mutate(|value|*value= *value +1);
+		}
+		Ok(())
+	}
     pub fn inner_unbid(
         penguin: PenguinFarmOf<T>,
         caller: AccountIdOf<T>,
@@ -2186,6 +2279,16 @@ impl<T: Config> Pallet<T> {
             Ok(current)
         })
     }
+
+	pub fn get_next_low_incubation_id() -> Result<TokenIdOf<T>, DispatchError> {
+		LowIncubationTokenId::<T>::try_mutate(|pre| {
+			let current = *pre;
+			*pre = pre
+				.checked_add(&One::one())
+				.ok_or(Error::<T>::NoAvailableTokenId)?;
+			Ok(current)
+		})
+	}
     pub fn query_red_penguin_num() -> BalanceOf<T> {
         s!(20000u128)
     }

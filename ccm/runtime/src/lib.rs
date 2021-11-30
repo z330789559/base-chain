@@ -528,12 +528,13 @@ parameter_types! {
     pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
     pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
     pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
+	//14 days
     pub const SmallYellowPenguinLockPeriod: BlockNumber = 14 * DAYS;
     pub const SmallYellowPenguinGrowPeriod: BlockNumber=30 * DAYS;
     pub const RedPenguinEggCountForIncubation:  Balance = 20 * DOLLARS;
     pub const YellowPenguinEggCountForIncubation: Balance =20 * DOLLARS;
     //7 days
-    pub const MalePenguinLifeSpan: BlockNumber= 20;
+    pub const MalePenguinLifeSpan: BlockNumber= 7 * DAYS;
     pub const ColdStroage: PalletId = PalletId(*b"par/cold");
     pub const ClassOwnerId:  PalletId = PalletId(*b"par/cwid");
     pub const IncubationId:  PalletId = PalletId(*b"par/incu");
@@ -547,12 +548,12 @@ parameter_types! {
     pub const BidCommissionRate:Permill = Permill::from_percent(3);
     pub const MalePenguinRate: Permill = Permill::from_percent(1);
     //1 days
-    pub const PenguinProducePeriod: BlockNumber =20  ;
-        //1440 hours
-    pub const YellowPenguinDeadPeriod: BlockNumber =20  ;
+    pub const PenguinProducePeriod: BlockNumber =1 * DAYS  ;
+        //14 days
+    pub const YellowPenguinDeadPeriod: BlockNumber =14 * DAYS;
     // 5days
     pub const IncubationLivePeriod: BlockNumber = 5 * DAYS;
-    pub const BidMaxPeriod: BlockNumber = 3 * MINUTES;
+    pub const BidMaxPeriod: BlockNumber = 1 * DAYS;
 }
 
 impl penguin_farm::Config for Runtime {
@@ -577,7 +578,6 @@ impl penguin_farm::Config for Runtime {
     type YellowPenguinEggRate = YellowPenguinEggRate;
     type TechnicalPenguinEggRate = TechnicalPenguinEggRate;
     type OperationPenguinEggRate = OperationPenguinEggRate;
-    type MalePenguinRate = MalePenguinRate;
     type PenguinProducePeriod = PenguinProducePeriod;
     type YellowPenguinDeadPeriod = YellowPenguinDeadPeriod;
     type SmallYellowPenguinLockPeriod = SmallYellowPenguinLockPeriod;
@@ -618,7 +618,7 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent}=17,
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=18,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
-        Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config<T>}=20,
+        Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=20,
 
     }
 );
