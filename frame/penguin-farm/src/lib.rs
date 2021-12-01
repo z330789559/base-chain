@@ -17,9 +17,7 @@ use sp_std::vec::Vec;
 mod mock;
 mod tests;
 use frame_support::scale_info::TypeInfo;
-use frame_support::sp_runtime::traits::{
-    AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, One, Zero,
-};
+use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedDiv, One, Zero};
 use sp_arithmetic::traits::CheckedRem;
 use sp_runtime::traits::BlockNumberProvider;
 
@@ -70,11 +68,11 @@ macro_rules! purchase_penguin {
             let index = ids.binary_search(&$token_id)?;
             ids.remove(index);
             Ok(())
-        }).map_err(|_:usize|Error::<T>::RemoveTokenIdError);
+        }).map_err(|_:usize|Error::<T>::RemoveTokenIdError)?;
 		       $owner_penguin::<T>::try_mutate($caller.clone(), |ids| {
                     ids.push($token_id);
             Ok(())
-        }).map_err(|_:usize|Error::<T>::AddTokenIdError);
+        }).map_err(|_:usize|Error::<T>::AddTokenIdError)?;
 			update_penguin!(@ $class_id, $token_id,$penguin_type,new_penguin);
         Self::deposit_event(Event::<T>::Purchase(
             $caller,
@@ -178,11 +176,8 @@ macro_rules! bid_penguin {
 
 macro_rules! unbid_penguin {
     ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$flag:expr) => {{
-		  let current_block = frame_system::Pallet::<T>::current_block_number();
 					let mut new_penguin = $e.clone();
 					let $tt{
-						pre_eat_at,
-						eat_count,
 						status,
 						owner,
 						..
@@ -209,34 +204,18 @@ macro_rules! update_penguin {
     }};
 }
 
-macro_rules! unbid_penguin_system{
-	($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$flag:expr) => {{
-		  let current_block = frame_system::Pallet::<T>::current_block_number();
-					let mut new_penguin = $e.clone();
-					let $tt{
-						pre_eat_at,
-						eat_count,
-						status,
-						owner,
-						..
-				} = $e;
-					if PenguinStatus::Bid != status { return;}
-		             if  $flag && current_block > T::YellowPenguinDeadPeriod::get() +pre_eat_at {
-							Penguins::<T>::remove($class_id, $token_id);
-							let _:Result<_,usize>=OwnerYellowPenguin::<T>::try_mutate(owner, |ids| {
-								let index = ids.binary_search(&$token_id)?;
-								ids.remove(index);
-								Ok(())
-							});
-						}else if current_block > T::PenguinProducePeriod::get() + pre_eat_at && status != PenguinStatus::Hunger {
-			             new_penguin.status = PenguinStatus::Hunger;
-							Penguins::<T>::mutate($class_id, $token_id, |penguin| {
-								sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
-							});
-		       }
-
+macro_rules! unbid_penguin_system {
+    ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$flag:expr) => {{
+        let mut new_penguin = $e.clone();
+        let $tt { status, .. } = $e;
+        if PenguinStatus::Bid != status {
+            return;
+        }
+        new_penguin.status = PenguinStatus::Hunger;
+        Penguins::<T>::mutate($class_id, $token_id, |penguin| {
+            sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt(new_penguin)));
+        });
     }};
-
 }
 
 mod weights;
@@ -395,7 +374,6 @@ pub mod pallet {
     use frame_support::sp_runtime::Permill;
     use frame_support::sp_std::convert::TryFrom;
     use frame_support::sp_std::ops::Add;
-    use frame_support::sp_std::time::Duration;
     use frame_support::traits::schedule::{Anon, DispatchTime};
     use frame_support::traits::Randomness;
     use frame_support::traits::{ExistenceRequirement, UnixTime, WithdrawReasons};
@@ -403,7 +381,7 @@ pub mod pallet {
     use frame_support::PalletId;
     use frame_system::pallet_prelude::OriginFor;
     use frame_system::{ensure_none, ensure_root, ensure_signed};
-    use primitive::{BlockNumber, DAYS};
+    use primitive::DAYS;
     use sp_runtime::traits::Hash;
 
     #[pallet::config]
@@ -1216,7 +1194,7 @@ pub mod pallet {
                 .into_iter()
                 .for_each(|(class_id, token_id)| {
                     if class_id == IncubationCouponClassId::<T>::get() {
-                        IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
+                       let _= IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
                             OwnerIncubationCouponAsset::<T>::try_mutate(&coupon.owner, |ids| {
                                 ids.binary_search(&token_id).map(|index| ids.remove(index))
                             });
@@ -1224,7 +1202,7 @@ pub mod pallet {
 
                         Self::deposit_event(Event::<T>::HightCouponExpire(class_id, token_id));
                     } else {
-                        IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
+						let _=IncubationCoupons::<T>::take(class_id, token_id).map(|coupon| {
                             OwnerIncubationCouponAsset::<T>::try_mutate(&coupon.owner, |ids| {
                                 ids.binary_search(&token_id).map(|index| ids.remove(index))
                             });
@@ -1327,7 +1305,6 @@ pub mod pallet {
                         owner,
                         eat_count,
                         incubation_remain,
-                        eggs,
                         ..
                     } = red_penguin;
                     ensure!(owner == &caller, Error::<T>::NoPermission);
@@ -1424,7 +1401,7 @@ pub mod pallet {
                     );
 
                     if block_number > *pre_eat_at + s!(T::YellowPenguinDeadPeriod::get()) {
-                        Self::yellow_penguin_death(class_id, token_id, owner.clone());
+                        Self::yellow_penguin_death(class_id, token_id, owner.clone())?;
                         return Err(Error::<T>::PenguinHadDeath)?;
                     }
 
@@ -1619,7 +1596,9 @@ pub mod pallet {
             ensure!(class_ids.len() <= 20, Error::<T>::MaxNumberLimit);
             class_ids
                 .into_iter()
-                .filter_map(|class_id| Self::inner_move_in(class_id, to.clone()).ok());
+                .for_each(|class_id|{
+		         let _:Result<_,DispatchError>=	Self::inner_move_in(class_id, to.clone());
+				});
 
             Ok(().into())
         }
@@ -1695,7 +1674,7 @@ pub mod pallet {
                         Penguins::<T>::remove(class_id, token_id);
                         OwnerYellowPenguin::<T>::try_mutate(&owner, |ids| {
                             ids.binary_search(&token_id).map(|index| ids.remove(index))
-                        });
+                        }).map_err(|_|Error::<T>::PenguinHadDeath)?;
                         YellowPenguinCount::<T>::mutate(|value| *value = *value - 1);
                         Self::deposit_event(Event::<T>::PenguinDead(class_id, token_id));
                     } else {
@@ -1755,7 +1734,6 @@ pub mod pallet {
                     let mut new_penguin = small_yellow_penguin.clone();
                     let SmallYellowPenguin {
                         pre_eat_at,
-                        eat_count,
                         status,
                         grow_value,
                         owner,
@@ -1770,7 +1748,7 @@ pub mod pallet {
                     if new_penguin.grow_value == T::SmallYellowPenguinGrowPeriod::get() {
                         let id = Self::get_next_yellow_id()?;
                         let yellow_penguin_class_id = YellowPenguinClassId::<T>::get();
-                        let mut new_penguin = YellowPenguin {
+                        let  new_penguin = YellowPenguin {
                             owner: new_penguin.owner,
                             start: Default::default(),
                             eat_count: 0u32,
@@ -1829,10 +1807,11 @@ pub mod pallet {
                 | PenguinFarm::YellowPenguin(_)
                 | PenguinFarm::SmallYellowPenguin(_) => {}
                 PenguinFarm::MalePenguin(MalePenguin { owner, .. }) => {
-                    OwnerMalePenguin::<T>::mutate(&owner, |ids| {
+                    let _ :Result<(),DispatchError>= OwnerMalePenguin::<T>::mutate(&owner, |ids| {
                         ids.binary_search(&token_id).map(|index| {
                             ids.remove(index);
-                        });
+                        }).map_err(|_|Error::<T>::PenguinNoExist)?;
+						Ok(())
                     });
                     MalePenguinCount::<T>::mutate(|value| *value = *value - 1);
                 }
@@ -1926,7 +1905,7 @@ pub mod pallet {
                         MalePenguinCount::<T>::mutate(|value| *value = *value + 1);
 
                         // let call = IsSubType::<<T as pallet::Config>::Call>::is_sub_type(&Call::<T>::remove_male_penguin{class_id:male_class_id,token_id:id}).ok_or(Error::<T>::NoAvailableClassId)?;
-                        T::Schedule::schedule(
+                      T::Schedule::schedule(
                             DispatchTime::After(T::MalePenguinLifeSpan::get()),
                             None,
                             MalePenguinCount::<T>::get() as u8,
@@ -1936,7 +1915,7 @@ pub mod pallet {
                                 token_id: id,
                             }
                             .into(),
-                        );
+                        )?;
                     }
                 }
                 b @ n if b == low_incubation_class_id => {
@@ -1957,7 +1936,7 @@ pub mod pallet {
                     LowIncubationCoupons::<T>::remove(class_id, token_id);
                     OwnerIncubationCouponAsset::<T>::mutate(&caller, |ids| {
                         ids.binary_search(&token_id).map(|index| ids.remove(index))
-                    });
+                    }).map_err(|_|Error::<T>::PenguinNoExist)?;
 
                     //生成一个小黄企鹅
                     let id = Self::get_next_small_yellow_id()?;
@@ -2108,11 +2087,12 @@ impl<T: Config> Pallet<T> {
         class_id: ClassIdOf<T>,
         token_id: TokenIdOf<T>,
         owner: AccountIdOf<T>,
-    ) {
+    ) ->Result<(),DispatchError>{
         Penguins::<T>::remove(class_id, token_id);
         OwnerYellowPenguin::<T>::mutate(owner, |ids| {
             ids.binary_search(&token_id).map(|index| ids.remove(index))
-        });
+        }).map_err(|_|Error::<T>::PenguinNoExist)?;
+		Ok(())
     }
 
     pub fn inner_move_in(class_id: ClassIdOf<T>, to: AccountIdOf<T>) -> Result<(), DispatchError> {
