@@ -57,7 +57,6 @@ macro_rules! purchase_penguin {
             WithdrawReasons::FEE,
             ExistenceRequirement::KeepAlive,
         )?;
-      	ensure!(&PenguinStatus::Bid == status,Error::<T>::MustNeedIsBid);
 		//挂拍卖蛋企鹅状态都是hunger
         BidPenguin::<T>::remove(($class_id, $token_id));
 		if status != &PenguinStatus::Hunger {
@@ -1769,6 +1768,11 @@ pub mod pallet {
                         OwnerYellowPenguin::<T>::mutate(owner, |ids| {
                             ids.push(id);
                         });
+						OwnerSmallYellowPenguin::<T>::mutate(owner, |ids| {
+							ids.binary_search(&token_id).map(|index|{
+								ids.remove(index)
+							})
+						});
                         YellowPenguinCount::<T>::mutate(|value| *value = *value + 1);
                         Self::deposit_event(Event::<T>::PenguinUpgrade(
                             class_id,
@@ -1777,7 +1781,7 @@ pub mod pallet {
                             id,
                         ));
                     } else {
-                        new_penguin.eat_count = 0;
+                        new_penguin.eat_count = 1;
                         new_penguin.pre_eat_at = block_number;
                         new_penguin.grow_value = grow_value.add(T::PenguinProducePeriod::get());
                         Penguins::<T>::mutate(class_id, token_id, |penguin| {
@@ -1826,7 +1830,8 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResultWithPostInfo
+		{
             let caller = ensure_signed(origin)?;
             let amount = <T as Config>::Currency::total_balance(&caller);
             let block_number = frame_system::Pallet::<T>::current_block_number();
