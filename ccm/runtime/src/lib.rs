@@ -271,6 +271,10 @@ parameter_types! {
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
+	  // 佣金标识
+	pub const CommissionStorage: PalletId = PalletId(*b"ccm/cosm");
+	// 佣金率
+	pub const CommissionRate: Permill =Permill::from_percent(10);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -285,6 +289,8 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+	type CommissionStorage = CommissionStorage;
+	type CommissionRate = CommissionRate;
 }
 
 parameter_types! {
