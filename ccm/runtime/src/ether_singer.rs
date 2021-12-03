@@ -21,7 +21,6 @@ impl sp_runtime::traits::Verify for EthereumSignature {
     fn verify<L: sp_runtime::traits::Lazy<[u8]>>(&self, mut msg: L, signer: &H160) -> bool {
         let mut m = [0u8; 32];
         m.copy_from_slice(Keccak256::digest(msg.get()).as_slice());
-        log::error!(target: "evm签名 ","{:?} {:?}",self.0,&m);
         match sp_io::crypto::secp256k1_ecdsa_recover(self.0.as_ref(), &m) {
             Ok(pubkey) => {
                 // TODO This conversion could use a comment. Why H256 first, then H160?

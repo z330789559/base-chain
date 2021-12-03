@@ -1765,7 +1765,7 @@ pub mod pallet {
                             id,
                             PenguinFarmOf::<T>::YellowPenguin(new_penguin),
                         );
-                        OwnerYellowPenguin::<T>::mutate(owner, |ids| {
+                        OwnerYellowPenguin::<T>::mutate(owner.clone(), |ids| {
                             ids.push(id);
                         });
 						OwnerSmallYellowPenguin::<T>::mutate(owner, |ids| {
