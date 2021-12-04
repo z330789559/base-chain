@@ -24,8 +24,6 @@ use sp_runtime::{
     DispatchError,
 };
 use sp_std::{prelude::*, vec::Vec};
-// use orml_traits::{AssetHandler};
-use frame_support::scale_info::TypeInfo;
 
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
@@ -39,7 +37,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AdsSlot<AccountId, Balance, BlockNumber> {
     pub start_time: BlockNumber,

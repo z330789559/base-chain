@@ -7,7 +7,7 @@ use sp_core::{ecdsa, H160, H256};
 pub use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Eq, PartialEq, Clone, Encode, Decode, sp_core::RuntimeDebug, scale_info::TypeInfo)]
+#[derive(Eq, PartialEq, Clone, Encode, Decode, sp_core::RuntimeDebug)]
 pub struct EthereumSignature(ecdsa::Signature);
 
 impl From<ecdsa::Signature> for EthereumSignature {
@@ -52,7 +52,6 @@ impl sp_runtime::traits::Verify for EthereumSignature {
     Encode,
     Decode,
     sp_core::RuntimeDebug,
-    scale_info::TypeInfo,
 )]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct EthereumSigner([u8; 20]);

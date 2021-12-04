@@ -3,11 +3,10 @@
 use std::sync::Arc;
 
 use ccm_runtime::{opaque::Block, AccountId, Balance, Hash, Index};
-use fc_rpc::{
-    EthBlockDataCache, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
-    SchemaV2Override, StorageOverride,
+use fc_rpc::{OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
+  StorageOverride,
 };
-use fc_rpc_core::types::FilterPool;
+use fc_rpc_core::types::{FilterPool, PendingTransactions};
 use jsonrpc_pubsub::manager::SubscriptionManager;
 use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
@@ -58,6 +57,7 @@ pub struct FullDeps<C, P, A: ChainApi> {
     pub filter_pool: Option<FilterPool>,
     /// Backend.
     pub backend: Arc<fc_db::Backend<Block>>,
+	pub pending_transactions: PendingTransactions,
     /// Maximum number of logs in a query.
     pub max_past_logs: u32,
     /// Manual seal command sink
@@ -103,6 +103,7 @@ where
         filter_pool,
         command_sink,
         backend,
+		pending_transactions,
         max_past_logs,
         enable_dev_signer,
     } = deps;
@@ -126,31 +127,29 @@ where
         Box::new(SchemaV1Override::new(client.clone()))
             as Box<dyn StorageOverride<_> + Send + Sync>,
     );
-    overrides_map.insert(
-        EthereumStorageSchema::V2,
-        Box::new(SchemaV2Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
+    // overrides_map.insert(
+    //     EthereumStorageSchema::V2,
+    //     Box::new(SchemaV2Override::new(client.clone()))
+    //         as Box<dyn StorageOverride<_> + Send + Sync>,
+    // );
 
     let overrides = Arc::new(OverrideHandle {
         schemas: overrides_map,
         fallback: Box::new(RuntimeApiStorageOverride::new(client.clone())),
     });
 
-    let block_data_cache = Arc::new(EthBlockDataCache::new(50, 50));
 
     io.extend_with(EthApiServer::to_delegate(EthApi::new(
         client.clone(),
         pool.clone(),
-        graph,
         ccm_runtime::TransactionConverter,
         network.clone(),
+		pending_transactions.clone(),
         signers,
         overrides.clone(),
         backend.clone(),
         is_authority,
         max_past_logs,
-        block_data_cache.clone(),
     )));
 
     if let Some(filter_pool) = filter_pool {
@@ -161,7 +160,6 @@ where
             500 as usize, // max stored filters
             overrides.clone(),
             max_past_logs,
-            block_data_cache.clone(),
         )));
     }
 

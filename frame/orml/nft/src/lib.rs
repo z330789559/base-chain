@@ -40,9 +40,9 @@ use sp_std::vec::Vec;
 
 mod mock;
 mod tests;
-use frame_support::scale_info::TypeInfo;
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CollectionType {
     Collectable,
@@ -71,7 +71,7 @@ impl Default for CollectionType {
     }
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum TokenType {
     Transferable = 0,
@@ -93,7 +93,7 @@ impl Default for TokenType {
     }
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct ClassData<Balance> {
     pub deposit: Balance,
@@ -102,7 +102,7 @@ pub struct ClassData<Balance> {
     pub collection_type: CollectionType,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AssetData<Balance> {
     pub deposit: Balance,
@@ -110,7 +110,7 @@ pub struct AssetData<Balance> {
     pub description: Vec<u8>,
 }
 /// Class info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 pub struct ClassInfo<Balance, AccountId, Data> {
     /// Class metadata
     pub metadata: Vec<u8>,
@@ -123,7 +123,7 @@ pub struct ClassInfo<Balance, AccountId, Data> {
 }
 
 /// Token info
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 pub struct TokenInfo<AccountId, Data> {
     /// Token metadata
     pub metadata: Vec<u8>,

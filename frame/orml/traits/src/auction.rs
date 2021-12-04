@@ -1,7 +1,6 @@
 use crate::Change;
 use codec::FullCodec;
 use codec::{Decode, Encode};
-pub use frame_support::scale_info::TypeInfo;
 use sp_runtime::{
     traits::{AtLeast32Bit, Bounded, MaybeSerializeDeserialize},
     DispatchError, DispatchResult, RuntimeDebug,
@@ -13,7 +12,7 @@ use sp_std::{
 };
 /// Auction info.
 // #[cfg_attr(feature = "std", derive(PartialEq, Eq))]
-#[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Eq, PartialEq, RuntimeDebug)]
 pub struct AuctionInfo<AccountId, Balance, BlockNumber> {
     /// Current bidder and bid price.
     pub bid: Option<(AccountId, Balance)>,

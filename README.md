@@ -13,6 +13,7 @@ The goal of Ethereum compatibility layer is to be able to:
 * Be able to import state from Ethereum mainnet.
 
 ## Releases
+0x15427054afd8eb74589c40a8974cf20484824a05cfb51d200a0152a590354d3a
 
 ### Primitives
 

@@ -10,18 +10,18 @@ license = "Apache-2.0"
 pallet-evm = { path = "../evm", version = "6.0.0-dev", default-features = false }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 serde = { version = "1.0.101", optional = true }
-sp-std = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-sp-core = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-sp-inherents = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
+sp-std = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+sp-core = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+sp-inherents = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+frame-system = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 async-trait = "0.1"
 scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
-pallet-timestamp = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
-sp-io = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate",rev="ba153b9ae050eda022f002d74d76f98d1e339a81" }
+pallet-timestamp = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+sp-io = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 
 [features]
 default = ["std"]

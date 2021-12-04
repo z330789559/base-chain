@@ -16,7 +16,6 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 mod mock;
 mod tests;
-use frame_support::scale_info::TypeInfo;
 use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedDiv, One, Zero};
 use sp_arithmetic::traits::CheckedRem;
 use sp_runtime::traits::BlockNumberProvider;
@@ -219,7 +218,7 @@ macro_rules! unbid_penguin_system {
 
 mod weights;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PenguinFarm<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     RedPenguin(RedPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId>),
@@ -250,7 +249,7 @@ impl<BlockNumber, AccountId, Balance, ClassId, AssetId>
     }
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PenguinStatus {
     ///正常
@@ -263,7 +262,7 @@ pub enum PenguinStatus {
     Death = 3,
 }
 
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CouponStatus {
     //未激活
@@ -276,7 +275,7 @@ pub enum CouponStatus {
     Hatch = 3,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct RedPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub owner: AccountId,
@@ -290,7 +289,7 @@ pub struct RedPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub incubation_remain: Balance,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct IncubationCoupon<BlockNumber, AccountId, ClassId, AssetId> {
     pub owner: AccountId,
@@ -300,7 +299,7 @@ pub struct IncubationCoupon<BlockNumber, AccountId, ClassId, AssetId> {
     pub class_id: ClassId,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct PenguinConfig<BlockNumber, AccountId, Balance> {
     pub owner: AccountId,
@@ -309,7 +308,7 @@ pub struct PenguinConfig<BlockNumber, AccountId, Balance> {
     pub status: PenguinStatus,
     pub eggs: Balance,
 }
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct YellowPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub owner: AccountId,
@@ -322,7 +321,7 @@ pub struct YellowPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub class_id: ClassId,
     pub incubation_remain: Balance,
 }
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct SmallYellowPenguin<BlockNumber, AccountId, ClassId, AssetId> {
     pub owner: AccountId,
@@ -335,7 +334,7 @@ pub struct SmallYellowPenguin<BlockNumber, AccountId, ClassId, AssetId> {
     pub grow_value: BlockNumber,
 }
 /// Class info
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct MalePenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub owner: AccountId,
@@ -349,7 +348,7 @@ pub struct MalePenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub incubation_remain: Balance,
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo)]
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Logs<T: Config> {
     penguin: Vec<PenguinFarmOf<T>>,
@@ -1915,11 +1914,7 @@ pub mod pallet {
                             None,
                             MalePenguinCount::<T>::get() as u8,
                             frame_system::RawOrigin::None.into(),
-                            Call::<T>::remove_male_penguin {
-                                class_id: male_class_id,
-                                token_id: id,
-                            }
-                            .into(),
+                            Call::<T>::remove_male_penguin(male_class_id,token_id).into(),
                         )?;
                     }
                 }

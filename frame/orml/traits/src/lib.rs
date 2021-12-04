@@ -18,12 +18,10 @@ pub use currency::{
     MultiLockableCurrency, MultiReservableCurrency, OnDust,
 };
 pub use data_provider::{DataFeeder, DataProvider, DataProviderExtended};
-pub use frame_support::scale_info::TypeInfo;
 pub use get_by_key::GetByKey;
 pub use nft::NFT;
 pub use price::{DefaultPriceProvider, PriceProvider};
 pub use rewards::RewardHandler;
-
 pub mod arithmetic;
 pub mod auction;
 pub mod currency;
@@ -52,7 +50,7 @@ pub trait CombineData<Key, TimestampedValue> {
 }
 
 /// Indicate if should change a value
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
 pub enum Change<Value> {
     /// No change.
     NoChange,
@@ -60,7 +58,7 @@ pub enum Change<Value> {
     NewValue(Value),
 }
 
-#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy, TypeInfo)]
+#[derive(Encode, Decode, RuntimeDebug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct TimestampedValue<Value: Ord + PartialOrd, Moment> {
     pub value: Value,

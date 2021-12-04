@@ -8,7 +8,7 @@ use ccm_runtime::{self, opaque::Block, RuntimeApi, SLOT_DURATION};
 use fc_consensus::FrontierBlockImport;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
-use fc_rpc_core::types::FilterPool;
+use fc_rpc_core::types::{FilterPool,PendingTransactions};
 use futures::StreamExt;
 use sc_cli::SubstrateCli;
 use sc_client_api::{BlockchainEvents, ExecutorProvider, RemoteBackend};
@@ -31,6 +31,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use std::collections::HashMap;
 
 // Our native executor instance.
 pub struct ExecutorDispatch;
@@ -133,6 +134,7 @@ pub fn new_partial(
         sc_transaction_pool::FullPool<Block, FullClient>,
         (
             ConsensusResult,
+			PendingTransactions,
             Option<FilterPool>,
             Arc<fc_db::Backend<Block>>,
             Option<Telemetry>,
@@ -187,6 +189,8 @@ pub fn new_partial(
     );
 
     let filter_pool: Option<FilterPool> = Some(Arc::new(Mutex::new(BTreeMap::new())));
+let pending_transactions: PendingTransactions =
+Some(Arc::new(Mutex::new(HashMap::new())));
 
     let frontier_backend = open_frontier_backend(config)?;
 
@@ -213,6 +217,7 @@ pub fn new_partial(
             transaction_pool,
             other: (
                 (frontier_block_import, sealing),
+	       pending_transactions,
                 filter_pool,
                 frontier_backend,
                 telemetry,
@@ -276,6 +281,7 @@ pub fn new_partial(
             transaction_pool,
             other: (
                 (frontier_block_import, grandpa_link),
+	         pending_transactions,
                 filter_pool,
                 frontier_backend,
                 telemetry,
@@ -301,7 +307,7 @@ pub fn new_full(mut config: Configuration, cli: &Cli) -> Result<TaskManager, Ser
         mut keystore_container,
         select_chain,
         transaction_pool,
-        other: (consensus_result, filter_pool, frontier_backend, mut telemetry),
+        other: (consensus_result, pending_transactions,filter_pool, frontier_backend, mut telemetry),
     } = new_partial(&config, &cli)?;
 
     if let Some(url) = &config.keystore_remote {
@@ -376,6 +382,7 @@ pub fn new_full(mut config: Configuration, cli: &Cli) -> Result<TaskManager, Ser
         let pool = transaction_pool.clone();
         let network = network.clone();
         let filter_pool = filter_pool.clone();
+		let  pending_transactions=pending_transactions.clone();
         let frontier_backend = frontier_backend.clone();
         let max_past_logs = cli.run.max_past_logs;
 
@@ -390,7 +397,8 @@ pub fn new_full(mut config: Configuration, cli: &Cli) -> Result<TaskManager, Ser
                 network: network.clone(),
                 filter_pool: filter_pool.clone(),
                 backend: frontier_backend.clone(),
-                max_past_logs,
+				pending_transactions: pending_transactions.clone(),
+				max_past_logs,
                 command_sink: Some(command_sink.clone()),
             };
 
@@ -439,12 +447,24 @@ pub fn new_full(mut config: Configuration, cli: &Cli) -> Result<TaskManager, Ser
         );
     }
 
+	// Spawn Frontier pending transactions maintenance task (as essential, otherwise we leak).
+	if let Some(pending_transactions) = pending_transactions {
+		const TRANSACTION_RETAIN_THRESHOLD: u64 = 5;
+		task_manager.spawn_essential_handle().spawn(
+			"frontier-pending-transactions",
+			EthTask::pending_transaction_task(
+				Arc::clone(&client),
+				pending_transactions,
+				TRANSACTION_RETAIN_THRESHOLD,
+			),
+		);
+	}
+
     task_manager.spawn_essential_handle().spawn(
         "frontier-schema-cache-task",
         EthTask::ethereum_schema_cache_task(
             Arc::clone(&client),
             Arc::clone(&frontier_backend),
-            pallet_ethereum::EthereumStorageSchema::V2,
         ),
     );
 

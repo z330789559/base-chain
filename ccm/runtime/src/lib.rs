@@ -15,7 +15,6 @@ use pallet_evm::{AddressMapping, EnsureAddressNever, EnsureAddressRoot, FeeCalcu
 use pallet_grandpa::{
     fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
-pub use scale_info::TypeInfo;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
@@ -61,9 +60,10 @@ use sp_core::u32_trait::{_1, _2, _5};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
+use pallet_balances::Config;
 
-mod precompiles;
-use precompiles::FrontierPrecompiles;
+// mod precompiles;
+// use precompiles::FrontierPrecompiles;
 
 /// Type of block number.
 
@@ -152,7 +152,7 @@ parameter_types! {
 pub struct MulitiAccountIdLookup<AccountId>(PhantomData<AccountId>);
 impl<AccountId> StaticLookup for MulitiAccountIdLookup<AccountId>
 where
-    AccountId: Codec + Clone + PartialEq + Debug + scale_info::TypeInfo + 'static + From<H160> +Into<H160>,
+    AccountId: Codec + Clone + PartialEq + Debug + 'static + From<H160> +Into<H160>,
 {
     type Source = MultiAddress<AccountId, ()>;
     type Target = H160;
@@ -277,6 +277,9 @@ parameter_types! {
 	pub const CommissionRate: Permill =Permill::from_percent(10);
 }
 
+
+
+
 impl pallet_balances::Config for Runtime {
     type MaxLocks = MaxLocks;
     type MaxReserves = ();
@@ -342,7 +345,6 @@ impl pallet_scheduler::Config for Runtime {
 parameter_types! {
     pub const ChainId: u64 = 88;
     pub BlockGasLimit: U256 = U256::from(u32::max_value());
-    pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 
 pub struct IdentityAddressMapping;
@@ -368,7 +370,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for EthereumFindAuthor<F> {
 }
 
 impl pallet_evm::Config for Runtime {
-    type FeeCalculator = BaseFee;
+    type FeeCalculator = ();
     type GasWeightMapping = ();
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
     type CallOrigin = EnsureAddressRoot<AccountId>;
@@ -377,8 +379,16 @@ impl pallet_evm::Config for Runtime {
     type Currency = Balances;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
-    type PrecompilesType = FrontierPrecompiles<Self>;
-    type PrecompilesValue = PrecompilesValue;
+	type Precompiles = (
+		pallet_evm_precompile_simple::ECRecover,
+		pallet_evm_precompile_simple::Sha256,
+		pallet_evm_precompile_simple::Ripemd160,
+		pallet_evm_precompile_simple::Identity,
+		pallet_evm_precompile_modexp::Modexp,
+		pallet_evm_precompile_simple::ECRecoverPublicKey,
+		pallet_evm_precompile_sha3fips::Sha3FIPS256,
+		pallet_evm_precompile_sha3fips::Sha3FIPS512,
+	);
     type ChainId = ChainId;
     type BlockGasLimit = BlockGasLimit;
     type OnChargeTransaction = ();
@@ -398,20 +408,20 @@ impl pallet_dynamic_fee::Config for Runtime {
     type MinGasPriceBoundDivisor = BoundDivision;
 }
 
-pub struct BaseFeeThreshold;
-impl pallet_base_fee::BaseFeeThreshold for BaseFeeThreshold {
-    fn lower() -> Permill {
-        Permill::zero()
-    }
-    fn upper() -> Permill {
-        Permill::from_parts(1_000_000)
-    }
-}
-
-impl pallet_base_fee::Config for Runtime {
-    type Event = Event;
-    type Threshold = BaseFeeThreshold;
-}
+// pub struct BaseFeeThreshold;
+// impl pallet_base_fee::BaseFeeThreshold for BaseFeeThreshold {
+//     fn lower() -> Permill {
+//         Permill::zero()
+//     }
+//     fn upper() -> Permill {
+//         Permill::from_parts(1_000_000)
+//     }
+// }
+//
+// impl pallet_base_fee::Config for Runtime {
+//     type Event = Event;
+//     type Threshold = BaseFeeThreshold;
+// }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
@@ -619,11 +629,11 @@ construct_runtime!(
         OrmlNft: orml_nft::{Pallet, Storage} = 12,
         Nft: pallet_nft::{Pallet, Storage, Event<T>,Call} = 13,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>}=14,
-        Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin}=15,
+        Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config,ValidateUnsigned}=15,
         EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>}=16,
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent}=17,
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=18,
-        BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
+        // BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
         Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=20,
 
     }
@@ -632,25 +642,28 @@ construct_runtime!(
 pub struct TransactionConverter;
 
 impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(&self, transaction: pallet_ethereum::Transaction) -> UncheckedExtrinsic {
-        UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
-        )
-    }
+	fn convert_transaction(
+		&self,
+		transaction: pallet_ethereum::Transaction,
+	) -> UncheckedExtrinsic {
+		UncheckedExtrinsic::new_unsigned(
+			pallet_ethereum::Call::<Runtime>::transact(transaction).into(),
+		)
+	}
 }
 
 impl fp_rpc::ConvertTransaction<opaque::UncheckedExtrinsic> for TransactionConverter {
-    fn convert_transaction(
-        &self,
-        transaction: pallet_ethereum::Transaction,
-    ) -> opaque::UncheckedExtrinsic {
-        let extrinsic = UncheckedExtrinsic::new_unsigned(
-            pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
-        );
-        let encoded = extrinsic.encode();
-        opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
-            .expect("Encoded extrinsic is always valid")
-    }
+	fn convert_transaction(
+		&self,
+		transaction: pallet_ethereum::Transaction,
+	) -> opaque::UncheckedExtrinsic {
+		let extrinsic = UncheckedExtrinsic::new_unsigned(
+			pallet_ethereum::Call::<Runtime>::transact(transaction).into(),
+		);
+		let encoded = extrinsic.encode();
+		opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
+			.expect("Encoded extrinsic is always valid")
+	}
 }
 
 /// The address format for describing accounts.
@@ -675,9 +688,9 @@ pub type SignedExtra = (
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-    fp_self_contained::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+         generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
-pub type CheckedExtrinsic = fp_self_contained::CheckedExtrinsic<AccountId, Call, SignedExtra, H160>;
+pub type CheckedExtrinsic =  generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,
@@ -687,52 +700,7 @@ pub type Executive = frame_executive::Executive<
     AllPallets,
 >;
 
-impl fp_self_contained::SelfContainedCall for Call {
-    type SignedInfo = H160;
 
-    fn is_self_contained(&self) -> bool {
-        match self {
-            Call::Ethereum(call) => call.is_self_contained(),
-            _ => false,
-        }
-    }
-
-    fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
-        match self {
-            Call::Ethereum(call) => call.check_self_contained(),
-            _ => None,
-        }
-    }
-
-    fn validate_self_contained(&self, info: &Self::SignedInfo) -> Option<TransactionValidity> {
-        match self {
-            Call::Ethereum(call) => call.validate_self_contained(info),
-            _ => None,
-        }
-    }
-
-    fn pre_dispatch_self_contained(
-        &self,
-        info: &Self::SignedInfo,
-    ) -> Option<Result<(), TransactionValidityError>> {
-        match self {
-            Call::Ethereum(call) => call.pre_dispatch_self_contained(info),
-            _ => None,
-        }
-    }
-
-    fn apply_self_contained(
-        self,
-        info: Self::SignedInfo,
-    ) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
-        match self {
-            call @ Call::Ethereum(pallet_ethereum::Call::transact { .. }) => Some(call.dispatch(
-                Origin::from(pallet_ethereum::RawOrigin::EthereumTransaction(info)),
-            )),
-            _ => None,
-        }
-    }
-}
 
 impl_runtime_apis! {
     impl sp_api::Core<Block> for Runtime {
@@ -750,8 +718,8 @@ impl_runtime_apis! {
     }
 
     impl sp_api::Metadata<Block> for Runtime {
-        fn metadata() -> OpaqueMetadata {
-            OpaqueMetadata::new(Runtime::metadata().into())
+          fn metadata() -> OpaqueMetadata {
+            Runtime::metadata().into()
         }
     }
 
@@ -841,8 +809,7 @@ impl_runtime_apis! {
             data: Vec<u8>,
             value: U256,
             gas_limit: U256,
-            max_fee_per_gas: Option<U256>,
-            max_priority_fee_per_gas: Option<U256>,
+            gas_price: Option<U256>,
             nonce: Option<U256>,
             estimate: bool,
         ) -> Result<pallet_evm::CallInfo, sp_runtime::DispatchError> {
@@ -860,10 +827,8 @@ impl_runtime_apis! {
                 data,
                 value,
                 gas_limit.low_u64(),
-                max_fee_per_gas,
-                max_priority_fee_per_gas,
+                gas_price,
                 nonce,
-                Vec::new(),
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
             ).map_err(|err| err.into())
         }
@@ -873,8 +838,7 @@ impl_runtime_apis! {
             data: Vec<u8>,
             value: U256,
             gas_limit: U256,
-            max_fee_per_gas: Option<U256>,
-            max_priority_fee_per_gas: Option<U256>,
+            gas_price: Option<U256>,
             nonce: Option<U256>,
             estimate: bool,
         ) -> Result<pallet_evm::CreateInfo, sp_runtime::DispatchError> {
@@ -891,10 +855,8 @@ impl_runtime_apis! {
                 data,
                 value,
                 gas_limit.low_u64(),
-                max_fee_per_gas,
-                max_priority_fee_per_gas,
+                gas_price,
                 nonce,
-                Vec::new(),
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
             ).map_err(|err| err.into())
         }
@@ -926,8 +888,8 @@ impl_runtime_apis! {
         fn extrinsic_filter(
             xts: Vec<<Block as BlockT>::Extrinsic>,
         ) -> Vec<EthereumTransaction> {
-            xts.into_iter().filter_map(|xt| match xt.0.function {
-                Call::Ethereum(transact { transaction }) => Some(transaction),
+            xts.into_iter().filter_map(|xt| match xt.function {
+                Call::Ethereum(transact(t)) => Some(t),
                 _ => None
             }).collect::<Vec<EthereumTransaction>>()
         }

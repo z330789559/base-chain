@@ -230,7 +230,6 @@ fn testnet_genesis(
         },
         ethereum: EthereumConfig {},
         dynamic_fee: Default::default(),
-        base_fee: Default::default(),
         farm: FarmConfig {},
     }
 }

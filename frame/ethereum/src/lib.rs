@@ -572,10 +572,12 @@ impl<T: Config> Pallet<T> {
     }
 
     fn apply_validated_transaction(source: H160, transaction: Transaction) -> PostDispatchInfo {
+		// let transaction_hash = transaction.hash();
+
         let transaction_hash =
             H256::from_slice(Keccak256::digest(&rlp::encode(&transaction)).as_slice());
         let transaction_index = Pending::<T>::get().len() as u32;
-
+         log::info!("交易hash:: {:?}",transaction_hash);
         let (to, _, info) = Self::execute(source, &transaction, None)
             .expect("transaction is already validated; error indicates that the block is invalid");
 
