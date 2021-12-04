@@ -1,0 +1,18 @@
+2021-12-03 21:27:51 Frontier Node    
+2021-12-03 21:27:51 ✌️  version 0.0.0-e01bed4-x86_64-macos    
+2021-12-03 21:27:51 ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2021-2021    
+2021-12-03 21:27:51 📋 Chain specification: ccm Testnet    
+2021-12-03 21:27:51 🏷 Node name: node1    
+2021-12-03 21:27:51 👤 Role: AUTHORITY    
+2021-12-03 21:27:51 💾 Database: RocksDb at /tmp/blocks/cc0/chains/ccm_testnet/db/full    
+2021-12-03 21:27:51 ⛓  Native runtime: ccm-1 (ccm-1.tx1.au1)    
+Error: Service(Client(Backend("IO error: While lock file: /tmp/blocks/cc0/chains/ccm_testnet/db/full/LOCK: Resource temporarily unavailable")))
+2021-12-03 21:28:09 Frontier Node    
+2021-12-03 21:28:09 ✌️  version 0.0.0-e01bed4-x86_64-macos    
+2021-12-03 21:28:09 ❤️  by Substrate DevHub <https://github.com/substrate-developer-hub>, 2021-2021    
+2021-12-03 21:28:09 📋 Chain specification: ccm Testnet    
+2021-12-03 21:28:09 🏷 Node name: node1    
+2021-12-03 21:28:09 👤 Role: AUTHORITY    
+2021-12-03 21:28:09 💾 Database: RocksDb at /tmp/blocks/cc0/chains/ccm_testnet/db/full    
+2021-12-03 21:28:09 ⛓  Native runtime: ccm-1 (ccm-1.tx1.au1)    
+Error: Service(Client(Backend("IO error: While lock file: /tmp/blocks/cc0/chains/ccm_testnet/db/full/LOCK: Resource temporarily unavailable")))

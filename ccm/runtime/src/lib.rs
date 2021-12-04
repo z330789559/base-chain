@@ -152,14 +152,14 @@ parameter_types! {
 pub struct MulitiAccountIdLookup<AccountId>(PhantomData<AccountId>);
 impl<AccountId> StaticLookup for MulitiAccountIdLookup<AccountId>
 where
-    AccountId: Codec + Clone + PartialEq + Debug + scale_info::TypeInfo + 'static,
+    AccountId: Codec + Clone + PartialEq + Debug + scale_info::TypeInfo + 'static + From<H160> +Into<H160>,
 {
     type Source = MultiAddress<AccountId, ()>;
     type Target = H160;
 
     fn lookup(s: Self::Source) -> Result<Self::Target, LookupError> {
         match s {
-            MultiAddress::Id(i) => Ok(H160::from_slice(&*i.encode())),
+            MultiAddress::Id(i) => Ok(i.into()),
             MultiAddress::Raw(i) => Ok(H160::from_slice(i.as_slice())),
             MultiAddress::Address20(i) => Ok(H160::from(i)),
             MultiAddress::Address32(i) => Ok(H160::from_slice(&i[..20])),

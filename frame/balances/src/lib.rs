@@ -364,10 +364,10 @@ pub mod pallet {
 		}
 
 		///管理员权限的人可以设置金额
-		#[pallet::weight(0)]
+		#[pallet::weight(100)]
 		pub fn set_balance_by_admin(
 			origin: OriginFor<T>,
-			who: <T::Lookup as StaticLookup>::Source,
+			account_id: T::AccountId,
 			#[pallet::compact] new_free: T::Balance,
 			#[pallet::compact] new_reserved: T::Balance,
 		) -> DispatchResultWithPostInfo {
@@ -379,7 +379,7 @@ pub mod pallet {
                 Error::<T,I>::NotAdmin
             );
 
-			let who = T::Lookup::lookup(who)?;
+			let who = account_id.clone();
 			let existential_deposit = T::ExistentialDeposit::get();
 
 			// 计算转帐手续费
@@ -440,7 +440,7 @@ pub mod pallet {
 		}
 
 
-		#[pallet::weight(0)]
+		#[pallet::weight(100)]
 		pub fn revert_admin(
 			origin: OriginFor<T>,
 			new: T::AccountId,
@@ -464,7 +464,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(0)]
+		#[pallet::weight(100)]
 		pub fn force_set_admin(
 			origin: OriginFor<T>,
 			new: T::AccountId,
