@@ -370,7 +370,7 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for EthereumFindAuthor<F> {
 }
 
 impl pallet_evm::Config for Runtime {
-    type FeeCalculator = ();
+    type FeeCalculator = DynamicFee;
     type GasWeightMapping = ();
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
     type CallOrigin = EnsureAddressRoot<AccountId>;
