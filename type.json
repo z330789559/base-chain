@@ -1,7 +1,29 @@
 {
+  "BlockNumber": "u64",
+  "Period": "(BlockNumber,u32)",
+  "maybe_periodic": "Option<Period>",
+  "priority": "u8",
   "ExtrinsicSignature": "EthereumSignature",
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
+  "AccountId": "EthereumAccountId",
+  "efCount": "u32",
+  "RefCount": "u32",
+  "AccountInfo": {
+    "nonce": "u32",
+    "sufficients": "RefCount",
+    "consumers": "RefCount",
+    "providers": "RefCount",
+    "data": "AccountData"
+  },
+  "AccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "fee_frozen": "Balance",
+    "misc_frozen": "Balance"
+  },
+  "Balance": "u128",
+  "AuthorId": "AccountId",
   "Account": {
     "nonce": "U256",
     "balance": "U256"

@@ -4,7 +4,7 @@ use crate::cli::Cli;
 #[cfg(feature = "manual-seal")]
 use crate::cli::Sealing;
 use async_trait::async_trait;
-use ccm_runtime::{self, opaque::Block, RuntimeApi, SLOT_DURATION};
+use ccm_runtime::{self, opaque::Block, RuntimeApi, SLOT_DURATION, WEIGHT_PER_SECOND};
 use fc_consensus::FrontierBlockImport;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
@@ -32,6 +32,7 @@ use std::{
     time::Duration,
 };
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 // Our native executor instance.
 pub struct ExecutorDispatch;
@@ -544,13 +545,14 @@ pub fn new_full(mut config: Configuration, cli: &Cli) -> Result<TaskManager, Ser
         let (block_import, grandpa_link) = consensus_result;
 
         if role.is_authority() {
-            let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+            let mut  proposer_factory = sc_basic_authorship::ProposerFactory::new(
                 task_manager.spawn_handle(),
                 client.clone(),
                 transaction_pool,
                 prometheus_registry.as_ref(),
                 telemetry.as_ref().map(|x| x.handle()),
             );
+			proposer_factory.set_default_block_size_limit((2 * WEIGHT_PER_SECOND).try_into().unwrap());
 
             let can_author_with =
                 sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
