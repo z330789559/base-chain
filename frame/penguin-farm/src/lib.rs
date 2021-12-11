@@ -894,6 +894,9 @@ pub mod pallet {
         >>::Balance: From<u128>,
     {
         fn build(&self) {
+
+            log::info!("DAYS:{:?}",DAYS);
+
             RedTokenId::<T>::set(1000000u32.into());
             YellowTokenId::<T>::set(2000000u32.into());
             SmallYellowTokenId::<T>::set(5000000u32.into());
