@@ -393,8 +393,8 @@ pub mod pallet {
 			// 计算最新的金额，扣除手续费后的金额
 			let new_free=new_free.checked_sub(&commission).ok_or(ArithmeticError::Overflow)?;
 
-			log::info!("{:?} set balance to {:?} , commission:{:?}",caller, dest,commission);
-			log::info!("{:?} set balance to {:?} , value:{:?},raw:{:?}",caller, who,new_free,new_free_copy);
+			//log::info!("{:?} set balance to {:?} , commission:{:?}",caller, dest,commission);
+			//log::info!("{:?} set balance to {:?} , value:{:?},raw:{:?}",caller, who,new_free,new_free_copy);
 
 			/*to_account.free =
 				to_account.free.checked_add(&value).ok_or(ArithmeticError::Overflow)?;*/
@@ -423,7 +423,7 @@ pub mod pallet {
 				(account.free, account.reserved)
 			})?;
 
-			log::info!("{:?} 's balance is setted,",who);
+			//log::info!("{:?} 's balance is setted,",who);
 
 			// 转账
 			<Self as Currency<_>>::transfer(
@@ -433,7 +433,7 @@ pub mod pallet {
 				ExistenceRequirement::KeepAlive,
 			)?;
 
-			log::info!("{:?} 's commssion is setted, transfer from {:?} to {:?}, with commission:{:?}",who,caller,dest,commission);
+			//log::info!("{:?} 's commssion is setted, transfer from {:?} to {:?}, with commission:{:?}",who,caller,dest,commission);
 
 			Self::deposit_event(Event::BalanceSet(who, free, reserved));
 			Ok(().into())

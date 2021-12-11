@@ -16,7 +16,7 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 mod mock;
 mod tests;
-use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedDiv, One, Zero};
+use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, One, Zero};
 use sp_arithmetic::traits::CheckedRem;
 use sp_runtime::traits::BlockNumberProvider;
 
@@ -945,6 +945,10 @@ pub mod pallet {
             RedPenguinProduceRate::<T>::set(T::RedPenguinEggRate::get() * eggs_per_day);
             YellowPenguinProduceRate::<T>::set(T::YellowPenguinEggRate::get() * eggs_per_day);
             MalePenguinProduceRate::<T>::set(T::MalePenguinEggRate::get() * eggs_per_day);
+
+            // 初始化第一个纪元的60个月
+            let firstEpoch: T::BlockNumber=  T::BlockNumber::from((DAYS * 60 * 30) as u32) ;
+            CurrentEpochPeriod::<T>::insert(1u32,firstEpoch)
         }
     }
 
@@ -964,7 +968,7 @@ pub mod pallet {
             if end_point == now {
                 CurrentEpoch::<T>::set(current_epoch + 1);
                 let remain_balance = <T as Config>::InitTotalSupply::get()
-                    - <T as Config>::Currency::total_issuance();
+                    .checked_sub(&<T as Config>::Currency::total_issuance()).unwrap_or(Default::default());
                 CurrentEpochBalance::<T>::insert(current_epoch + 1, remain_balance);
                 match current_epoch {
                     1u32 => {
