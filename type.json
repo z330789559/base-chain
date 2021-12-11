@@ -1,13 +1,7 @@
 {
-  "BlockNumber": "u64",
-  "Period": "(BlockNumber,u32)",
-  "maybe_periodic": "Option<Period>",
-  "priority": "u8",
-  "ExtrinsicSignature": "EthereumSignature",
-  "Address": "MultiAddress",
-  "LookupSource": "MultiAddress",
   "AccountId": "EthereumAccountId",
   "efCount": "u32",
+  "Address": "MultiAddress",
   "RefCount": "u32",
   "AccountInfo": {
     "nonce": "u32",
@@ -22,8 +16,57 @@
     "fee_frozen": "Balance",
     "misc_frozen": "Balance"
   },
+  "LookupSource": "MultiAddress",
   "Balance": "u128",
   "AuthorId": "AccountId",
+  "AdsSlot":{
+    "start_time":"u64",
+    "end_time":"u64",
+    "deposit":"Balance",
+    "media":"Vec<u8>",
+    "owner":"H160"
+  },
+  "ClassInfoOf":{
+
+    "metadata":"Vec<u8>",
+    "total_issuance":"Balance",
+    "owner":"H160",
+    "data":"Vec<u8>"
+
+  },
+  "CouponStatus":{
+    "enum":{
+      "UnActive":"usize",
+      "Liquid":"usize",
+      "Retire":"usize",
+      "Hatch":"usize"
+    }
+  },
+  "IncubationCouponOf":{
+    "owner":"H160",
+    "start":"u64",
+    "status":"CouponStatus",
+    "asset_id":"u64",
+    "class_id":"u64"
+  },
+  "TokenType":{
+    "enum":{
+      "Transferable":"usize",
+      "BoundToAddress":"usize"
+    }
+  },
+  "CollectionType":{
+    "enum":{
+      "Collectable":"usize",
+      "Executable":"usize"
+    }
+  },
+  "ExtrinsicSignature": "EthereumSignature",
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
+  "ClassIdOf":"u64",
+  "TokenIdOf":"u64",
+  "TokenId":"u64",
   "Account": {
     "nonce": "U256",
     "balance": "U256"
