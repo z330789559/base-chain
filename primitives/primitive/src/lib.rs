@@ -22,4 +22,11 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 // Time is measured by number of blocks.
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
+
+#[cfg(ccmtest)]
 pub const DAYS: BlockNumber = 3 * MINUTES;
+
+#[cfg(not(ccmtest))]
+pub const DAYS: BlockNumber = 24 * HOURS;
+
+
