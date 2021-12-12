@@ -19,54 +19,50 @@
   "LookupSource": "MultiAddress",
   "Balance": "u128",
   "AuthorId": "AccountId",
-  "AdsSlot":{
-    "start_time":"u64",
-    "end_time":"u64",
-    "deposit":"Balance",
-    "media":"Vec<u8>",
-    "owner":"H160"
+  "AdsSlot": {
+    "start_time": "u64",
+    "end_time": "u64",
+    "deposit": "Balance",
+    "media": "Vec<u8>",
+    "owner": "H160"
   },
-  "ClassInfoOf":{
-
-    "metadata":"Vec<u8>",
-    "total_issuance":"Balance",
-    "owner":"H160",
-    "data":"Vec<u8>"
-
+  "ClassInfoOf": {
+    "metadata": "Vec<u8>",
+    "total_issuance": "Balance",
+    "owner": "H160",
+    "data": "Vec<u8>"
   },
-  "CouponStatus":{
-    "enum":{
-      "UnActive":"usize",
-      "Liquid":"usize",
-      "Retire":"usize",
-      "Hatch":"usize"
+  "CouponStatus": {
+    "enum": {
+      "UnActive": "usize",
+      "Liquid": "usize",
+      "Retire": "usize",
+      "Hatch": "usize"
     }
   },
-  "IncubationCouponOf":{
-    "owner":"H160",
-    "start":"u64",
-    "status":"CouponStatus",
-    "asset_id":"u64",
-    "class_id":"u64"
+  "IncubationCouponOf": {
+    "owner": "H160",
+    "start": "u64",
+    "status": "CouponStatus",
+    "asset_id": "u64",
+    "class_id": "u64"
   },
-  "TokenType":{
-    "enum":{
-      "Transferable":"usize",
-      "BoundToAddress":"usize"
+  "TokenType": {
+    "enum": {
+      "Transferable": "usize",
+      "BoundToAddress": "usize"
     }
   },
-  "CollectionType":{
-    "enum":{
-      "Collectable":"usize",
-      "Executable":"usize"
+  "CollectionType": {
+    "enum": {
+      "Collectable": "usize",
+      "Executable": "usize"
     }
   },
   "ExtrinsicSignature": "EthereumSignature",
-  "Address": "MultiAddress",
-  "LookupSource": "MultiAddress",
-  "ClassIdOf":"u64",
-  "TokenIdOf":"u64",
-  "TokenId":"u64",
+  "ClassIdOf": "u64",
+  "TokenIdOf": "u64",
+  "TokenId": "u64",
   "Account": {
     "nonce": "U256",
     "balance": "U256"
@@ -84,5 +80,121 @@
     "v": "u64",
     "r": "H256",
     "s": "H256"
+  },
+  "xAccountVote": {
+    "_enum": {
+      "Standard": "AccountVoteStandard",
+      "Split": "AccountVoteSplit"
+    }
+  },
+  "AccountVoteSplit": {
+    "aye": "Balance",
+    "nay": "Balance"
+  },
+  "AccountVoteStandard": {
+    "vote": "Vote",
+    "balance": "Balance"
+  },
+  "Conviction": {
+    "_enum": "AllConvictions"
+  },
+  "Delegations": {
+    "votes": "Balance",
+    "capital": "Balance"
+  },
+  "PreimageStatus": {
+    "_enum": {
+      "Missing": "BlockNumber",
+      "Available": "PreimageStatusAvailable"
+    }
+  },
+  "PreimageStatusAvailable": {
+    "data": "Bytes",
+    "provider": "AccountId",
+    "deposit": "Balance",
+    "since": "BlockNumber",
+    "expiry": "Option<BlockNumber>"
+  },
+  "PriorLock": "(BlockNumber, Balance)",
+  "PropIndex": "u32",
+  "Proposal": "Call",
+  "ProxyState": {
+    "_enum": {
+      "Open": "AccountId",
+      "Active": "AccountId"
+    }
+  },
+  "ReferendumIndex": "u32",
+  "ReferendumInfoTo239": {
+    "end": "BlockNumber",
+    "proposalHash": "Hash",
+    "threshold": "VoteThreshold",
+    "delay": "BlockNumber"
+  },
+  "ReferendumInfo": {
+    "_enum": {
+      "Ongoing": "ReferendumStatus",
+      "Finished": "ReferendumInfoFinished"
+    }
+  },
+  "ReferendumInfoFinished": {
+    "approved": "bool",
+    "end": "BlockNumber"
+  },
+  "ReferendumStatus": {
+    "end": "BlockNumber",
+    "proposalHash": "Hash",
+    "threshold": "VoteThreshold",
+    "delay": "BlockNumber",
+    "tally": "Tally"
+  },
+  "Tally": {
+    "ayes": "Balance",
+    "nays": "Balance",
+    "turnout": "Balance"
+  },
+  "Voting": {
+    "_enum": {
+      "Direct": "VotingDirect",
+      "Delegating": "VotingDelegating"
+    }
+  },
+  "VotingDirect": {
+    "votes": "Vec<VotingDirectVote>",
+    "delegations": "Delegations",
+    "prior": "PriorLock"
+  },
+  "VotingDirectVote": "(ReferendumIndex, AccountVote)",
+  "VotingDelegating": {
+    "balance": "Balance",
+    "target": "AccountId",
+    "conviction": "Conviction",
+    "delegations": "Delegations",
+    "prior": "PriorLock"
+  },
+  "CollectiveOrigin": {
+    "_enum": {
+      "Members": "(MemberCount, MemberCount)",
+      "Member": "AccountId"
+    }
+  },
+  "MemberCount": "u32",
+  "ProposalIndex": "u32",
+  "VotesTo230": {
+    "index": "ProposalIndex",
+    "threshold": "MemberCount",
+    "ayes": "Vec<AccountId>",
+    "nays": "Vec<AccountId>"
+  },
+  "instances": {
+    "council": ["council"],
+    "technicalCommittee": ["technicalCommittee"]
+  },
+  "Votes": {
+    "index": "ProposalIndex",
+    "threshold": "MemberCount",
+    "ayes": "Vec<AccountId>",
+    "nays": "Vec<AccountId>",
+    "end": "BlockNumber"
   }
 }

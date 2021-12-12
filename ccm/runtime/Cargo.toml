@@ -21,10 +21,12 @@ pallet-bounties ={ default-features = false,git = "http://47.102.99.229:17000/bl
 pallet-scheduler = { default-features = false,git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 frame-executive = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 frame-support = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+pallet-democracy = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 frame-system = { default-features = false, package = "frame-system", git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 frame-system-rpc-runtime-api = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-collective = { default-features = false,git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-ethereum = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2"  }
+pallet-elections-phragmen = { default-features = false,git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-evm = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2"}
 pallet-nft = { default-features = false, path = "../../frame/nft" }
 orml-nft  = { default-features = false, path = "../../frame/orml/nft" }
@@ -78,6 +80,8 @@ std = [
 	"orml-nft/std",
 	"codec/std",
 	"serde",
+	"pallet-democracy/std",
+	"pallet-elections-phragmen/std",
 	"sha3/std",
 	"pallet-assets/std",
     "pallet-collective/std",

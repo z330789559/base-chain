@@ -1,6 +1,6 @@
 {
-  "name": "ccm Testnet",
-  "id": "ccm_testnet",
+  "name": "ccm",
+  "id": "ccm_mainnet",
   "chainType": {
     "Custom": "ccm"
   },

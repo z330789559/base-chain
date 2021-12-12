@@ -1,8 +1,4 @@
-use ccm_runtime::{
-    AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig,
-	FarmConfig,
-    GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
-};
+use ccm_runtime::{AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig, FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY, Balance, DOLLARS};
 // FarmConfig,
 use hex_literal::hex;
 use penguin_farm::{PenguinConfig, PenguinStatus};
@@ -167,6 +163,8 @@ fn testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> GenesisConfig {
+	let  num_endowed_accounts=endowed_accounts.len();
+	const STASH: Balance = 100 * DOLLARS;
     GenesisConfig {
         system: SystemConfig {
             // Add Wasm runtime to storage.
@@ -181,6 +179,14 @@ fn testnet_genesis(
                 .map(|k| (k, 1 << 70))
                 .collect(),
         },
+		elections: ElectionsConfig {
+			members: endowed_accounts
+				.iter()
+				.take((num_endowed_accounts + 1) / 2)
+				.cloned()
+				.map(|member| (member, STASH))
+				.collect(),
+		},
         aura: AuraConfig {
             authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
         },
@@ -194,7 +200,16 @@ fn testnet_genesis(
             // Assign network admin rights.
             key: root_key,
         },
-        council: CouncilConfig::default(),
+		technical_committee: TechnicalCommitteeConfig {
+			members: endowed_accounts
+				.iter()
+				.take((num_endowed_accounts + 1) / 2)
+				.cloned()
+				.collect(),
+			phantom: Default::default(),
+		},
+		democracy: DemocracyConfig::default(),
+        council: CouncilConfig::default() ,
         treasury: Default::default(),
         evm: EVMConfig {
             accounts: {
