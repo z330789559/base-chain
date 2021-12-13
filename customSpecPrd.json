@@ -49,11 +49,11 @@
       },
       "council": {
         "phantom": null,
-        "members": []
+        "members": ["0xf5348b0D6eb820691F794f6b37e4CE3b4bBA2061"]
       },
       "technicalCommittee": {
         "phantom": null,
-        "members": []
+        "members": ["0xf5348b0D6eb820691F794f6b37e4CE3b4bBA2061"]
       },
       "democracy": {
         "phantom": null
