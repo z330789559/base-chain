@@ -362,9 +362,14 @@ impl pallet_scheduler::Config for Runtime {
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
 }
+#[cfg(not(ccmtest))]
+pub const LocalChainId: u64  =88;
+#[cfg(ccmtest)]
+pub const LocalChainId: u64 = 87;
 
 parameter_types! {
-    pub const ChainId: u64 = 88;
+
+    pub const ChainId: u64 = LocalChainId;
     pub BlockGasLimit: U256 = U256::from(u32::max_value());
 }
 
