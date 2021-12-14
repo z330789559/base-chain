@@ -121,11 +121,11 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
                 // Pre-funded accounts
                 vec![
-                    AccountId::from_str("0x69aA70Bd59d22FF13cB1FE90b66EBf474b4a5D32").unwrap(),
-                    AccountId::from_str("0x8c6ca6d78EC4bDb6ce3b58B4BB788323263b7eFD").unwrap(),
-                    AccountId::from_str("0x910D0F22f29bA12ff15E7A2aB6590944E9c2588D").unwrap(),
-                    AccountId::from_str("0x4d4869b6d69915addA0ff8e6B839b2196b3CEF29").unwrap(),
-                    AccountId::from_str("0x256CD031Bfa21542D6Ea1cA6bfdC987ABC49005d").unwrap(),
+                    AccountId::from_str("0x2c95eDE69Da04b2cdB1c7873c0e2ea8Fb121a596").unwrap(),
+                    AccountId::from_str("0x3fcAA1E75397b4Ad18Be21036e6Cc28bC97F602A").unwrap(),
+                    AccountId::from_str("0x5EF1068Db4e1e3CA3551a574aa1397d4dC4422bB").unwrap(),
+                    AccountId::from_str("0x9d9B0A61b4E0B60C9e91E87362C31C261eE22Eae").unwrap(),
+                    AccountId::from_str("0x7cb821cB086B979a6eD429543859c1A9eFE0928c").unwrap(),
                     AccountId::from_str("0x5f807d760E50fFedb492bcAA3220115d97D95AC6").unwrap(),
                     AccountId::from_str("0xc1432Db8842742937E8b27475C9a220e63C2cCaD").unwrap(),
                     AccountId::from_str("0x9f883b12fd0692714c2f28be6c40d3afdb9081d3").unwrap(),
