@@ -1564,8 +1564,8 @@ pub mod pallet {
                         let yellow_penguin_class_id = YellowPenguinClassId::<T>::get();
                         let  new_penguin = YellowPenguin {
                             owner: new_penguin.owner,
-                            start: Default::default(),
-                            eat_count: 0u32,
+                            start: block_number,
+                            eat_count: 1u32,
                             status: PenguinStatus::Active,
                             pre_eat_at: block_number,
                             eggs: Default::default(),
@@ -1908,6 +1908,8 @@ impl<T: Config> Pallet<T> {
         OwnerYellowPenguin::<T>::mutate(owner, |ids| {
             ids.binary_search(&token_id).map(|index| ids.remove(index))
         }).map_err(|_|Error::<T>::PenguinNoExist)?;
+
+        YellowPenguinCount::<T>::mutate(|value| *value = *value - 1);
 		Ok(())
     }
 
