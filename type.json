@@ -1,6 +1,88 @@
 {
   "AccountId": "EthereumAccountId",
-  "efCount": "u32",
+  "BlockNumber":"u64",
+  "Balance":"u128",
+  "ClassInfoOf": {
+    "metadata": "Vec<u8>",
+    "total_issuance": "Balance",
+    "owner": "H160",
+    "data": "Vec<u8>"
+  },
+  "PenguinFarmOf": {
+    "_enum": {
+      "RedPenguin": "RedPenguin",
+      "YellowPenguin": "YellowPenguin",
+      "SmallYellowPenguin": "SmallYellowPenguin",
+      "MalePenguin": "MalePenguin"
+    }
+  },
+  "PenguinStatus": {
+    "_enum": ["Active", "Hunger","Bid","Death"]
+  },
+  "RedPenguin": {
+    "owner": "AccountId",
+    "start": "BlockNumber",
+    "pre_eat_at": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "eggs": "Balance",
+    "asset_id": "u64",
+    "class_id": "u32",
+    "incubation_remain": "Balance"
+  },
+  "YellowPenguin": {
+    "owner": "AccountId",
+    "start": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "pre_eat_at": "BlockNumber",
+    "eggs": "Balance",
+    "asset_id": "u64",
+    "class_id": "u32",
+    "incubation_remain": "Balance"
+  },
+  "SmallYellowPenguin": {
+    "owner": "AccountId",
+    "start": "BlockNumber",
+    "pre_eat_at": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "asset_id": "u64",
+    "class_id": "u32",
+    "grow_value": "BlockNumber"
+  },
+  "MalePenguin": {
+    "owner": "AccountId",
+    "start": "BlockNumber",
+    "pre_eat_at": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "eggs": "Balance",
+    "asset_id": "u64",
+    "class_id": "u32",
+    "incubation_remain": "Balance"
+  },
+  "BlackPenguinOf": {
+    "owner": "AccountId",
+    "start": "BlockNumber",
+    "pre_eat_at": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "eggs": "Balance",
+    "asset_id": "u64",
+    "class_id": "u32",
+    "incubation_remain": "Balance"
+  },
+  "BluePenguinOf": {
+    "start": "BlockNumber",
+    "pre_eat_at": "BlockNumber",
+    "eat_count": "u32",
+    "status": "PenguinStatus",
+    "eggs": "Balance",
+    "incubation_remain": "Balance"
+  },
+  "ClassIdOf": "u32",
+  "ClassId": "u32",
   "Address": "MultiAddress",
   "RefCount": "u32",
   "AccountInfo": {
@@ -17,7 +99,6 @@
     "misc_frozen": "Balance"
   },
   "LookupSource": "MultiAddress",
-  "Balance": "u128",
   "AuthorId": "AccountId",
   "AdsSlot": {
     "start_time": "u64",
@@ -26,19 +107,8 @@
     "media": "Vec<u8>",
     "owner": "H160"
   },
-  "ClassInfoOf": {
-    "metadata": "Vec<u8>",
-    "total_issuance": "Balance",
-    "owner": "H160",
-    "data": "Vec<u8>"
-  },
   "CouponStatus": {
-    "enum": {
-      "UnActive": "usize",
-      "Liquid": "usize",
-      "Retire": "usize",
-      "Hatch": "usize"
-    }
+    "_enum": ["UnActive","Liquid","Retire","Hatch"]
   },
   "IncubationCouponOf": {
     "owner": "H160",
@@ -60,12 +130,16 @@
     }
   },
   "ExtrinsicSignature": "EthereumSignature",
-  "ClassIdOf": "u64",
   "TokenIdOf": "u64",
   "TokenId": "u64",
   "Account": {
     "nonce": "U256",
     "balance": "U256"
+  },
+  "TokenInfoOf": {
+    "metadata": "Vec<u8>",
+    "owner": "AccountId",
+    "data": "AssetData"
   },
   "Transaction": {
     "nonce": "U256",
@@ -187,8 +261,12 @@
     "nays": "Vec<AccountId>"
   },
   "instances": {
-    "council": ["council"],
-    "technicalCommittee": ["technicalCommittee"]
+    "council": [
+      "council"
+    ],
+    "technicalCommittee": [
+      "technicalCommittee"
+    ]
   },
   "Votes": {
     "index": "ProposalIndex",

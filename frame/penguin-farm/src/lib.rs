@@ -253,26 +253,31 @@ impl<BlockNumber, AccountId, Balance, ClassId, AssetId>
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum PenguinStatus {
     ///正常
-    Active = 0,
+    Active,
     ///饥饿
-    Hunger = 1,
+    Hunger,
     ///挂单
-    Bid = 2,
+    Bid,
     ///死亡
-    Death = 3,
+    Death,
 }
+
+impl Default for PenguinStatus {
+    fn default() -> Self { PenguinStatus::Death }
+}
+
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CouponStatus {
     //未激活
-    UnActive = 0,
+    UnActive,
     //流通
-    Liquid = 1,
+    Liquid,
     //收回
-    Retire = 2,
+    Retire,
     //孵化
-    Hatch = 3,
+    Hatch,
 }
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
@@ -288,6 +293,7 @@ pub struct RedPenguin<BlockNumber, AccountId, Balance, ClassId, AssetId> {
     pub class_id: ClassId,
     pub incubation_remain: Balance,
 }
+
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -661,6 +667,7 @@ pub mod pallet {
         IncubationCoupon<BlockNumberOf<T>, AccountIdOf<T>, ClassIdOf<T>, TokenIdOf<T>>;
     pub type PenguinFarmOf<T> =
         PenguinFarm<BlockNumberOf<T>, AccountIdOf<T>, BalanceOf<T>, ClassIdOf<T>, TokenIdOf<T>>;
+
     /// 红企鹅拥有数量
     #[pallet::storage]
     #[pallet::getter(fn owner_red_penguin)]
@@ -1391,6 +1398,7 @@ pub mod pallet {
                 Error::<T>::NoPermission
             );
             Self::inner_move_in(class_id, to)?;
+
             Ok(().into())
         }
 
@@ -1917,6 +1925,7 @@ impl<T: Config> Pallet<T> {
         let red_class_id = RedPenguinClassId::<T>::get();
         let yellow_class_id = YellowPenguinClassId::<T>::get();
         let small_yellow_class_id = SmallYellowPenguinClassId::<T>::get();
+
         ensure!(
             class_id == red_class_id
                 || class_id == yellow_class_id
