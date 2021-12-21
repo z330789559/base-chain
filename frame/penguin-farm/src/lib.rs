@@ -81,6 +81,7 @@ macro_rules! purchase_penguin {
     }};
 }
 macro_rules! bid_penguin {
+    // 红 和 小黄的逻辑
     ($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$flag:expr) => {{
         let current_block = frame_system::Pallet::<T>::current_block_number();
         let mut new_penguin = $e.clone();
@@ -128,7 +129,7 @@ macro_rules! bid_penguin {
                                 },
                             );
     }};
-
+    // 黄的处理逻辑
 	($e:expr,$tt:ident,$class_id:expr,$token_id:expr,$caller:expr,$death_period:expr,$penguin_owner:ident) => {{
         let current_block = frame_system::Pallet::<T>::current_block_number();
         let mut new_penguin = $e.clone();
@@ -140,7 +141,15 @@ macro_rules! bid_penguin {
             ..
         } = $e;
         ensure!($caller == owner.clone(), Error::<T>::NoPermission);
-		ensure!(current_block - pre_eat_at >= $death_period - T::BidMaxPeriod::get(),Error::<T>::PenguinNeedFeed);
+        let bid_perd=T::BidMaxPeriod::get();
+        log::info!("current:{:?}, yellow pre_eat_at {:?}, death_period:{:?},bid_period:{:?}, PenguinProducePeriod:{:?}",
+            current_block,pre_eat_at,$death_period,bid_perd,T::PenguinProducePeriod::get());
+		ensure!(current_block - pre_eat_at < $death_period - bid_perd,Error::<T>::PenguinNeedFeed);
+        /*if current_block > pre_eat_at + $death_period {
+              Self::yellow_penguin_death($class_id, $token_id, owner.clone())?;
+              return Err(Error::<T>::PenguinHadDeath)?;
+        }*/
+
 		ensure!(PenguinStatus::Active ==status ||PenguinStatus::Hunger ==status,  Error::<T>::PenguinStatusError );
 		ensure!(!(eat_count ==1u32 && new_penguin.pre_eat_at > T::PenguinProducePeriod::get()),Error::<T>::NeedClaimPenguinEgg);
         new_penguin.status = PenguinStatus::Bid;
@@ -196,6 +205,7 @@ macro_rules! update_penguin {
         });
     }};
     (@ $class_id:tt,$token_id:tt,$tt:tt,$new_penguin:expr) => {{
+        log::info!("update_penguin@");
         Penguins::<T>::mutate($class_id, $token_id, |penguin| {
             sp_std::mem::swap(penguin, &mut Some(PenguinFarmOf::<T>::$tt($new_penguin)));
         });
@@ -1918,6 +1928,7 @@ impl<T: Config> Pallet<T> {
         }).map_err(|_|Error::<T>::PenguinNoExist)?;
 
         YellowPenguinCount::<T>::mutate(|value| *value = *value - 1);
+        Self::deposit_event(Event::<T>::PenguinDead(class_id, token_id));
 		Ok(())
     }
 
