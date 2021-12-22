@@ -83,6 +83,7 @@
   },
   "ClassIdOf": "u32",
   "ClassId": "u32",
+  "AssetId": "u64",
   "Address": "MultiAddress",
   "RefCount": "u32",
   "AccountInfo": {
@@ -111,11 +112,11 @@
     "_enum": ["UnActive","Liquid","Retire","Hatch"]
   },
   "IncubationCouponOf": {
-    "owner": "H160",
-    "start": "u64",
+    "owner": "AccountId",
+    "start": "BlockNumber",
     "status": "CouponStatus",
-    "asset_id": "u64",
-    "class_id": "u64"
+    "asset_id": "AssetId",
+    "class_id": "ClassId"
   },
   "TokenType": {
     "enum": {

@@ -20,6 +20,9 @@ use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, Checked
 use sp_arithmetic::traits::CheckedRem;
 use sp_runtime::traits::BlockNumberProvider;
 
+use primitive::DAYS;
+use primitive::MALE_PENGUIN_RATE;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -395,7 +398,7 @@ pub mod pallet {
     use frame_support::PalletId;
     use frame_system::pallet_prelude::OriginFor;
     use frame_system::{ensure_none, ensure_root, ensure_signed};
-    use primitive::DAYS;
+
     use sp_runtime::traits::Hash;
 
     #[pallet::config]
@@ -575,6 +578,8 @@ pub mod pallet {
         PenguinDead(ClassIdOf<T>, TokenIdOf<T>),
         PenguinUpgrade(ClassIdOf<T>, TokenIdOf<T>, ClassIdOf<T>, TokenIdOf<T>),
         FeedPenguinSuccess(ClassIdOf<T>, TokenIdOf<T>),
+        ///公企鹅🐧被移除，Male Penguin removed
+        MalePenguinRemoved(ClassIdOf<T>, TokenIdOf<T>,AccountIdOf<T>),
     }
 
     /// Error for non-fungible-token module.
@@ -911,6 +916,8 @@ pub mod pallet {
         >>::Balance: From<u128>,
     {
         fn build(&self) {
+            <Pallet<T>>::print_init_variable();
+
             RedTokenId::<T>::set(1000000u32.into());
             YellowTokenId::<T>::set(2000000u32.into());
             SmallYellowTokenId::<T>::set(5000000u32.into());
@@ -965,7 +972,8 @@ pub mod pallet {
 
             // 初始化第一个纪元的60个月
             let firstEpoch: T::BlockNumber=  T::BlockNumber::from((DAYS * 60 * 30) as u32) ;
-            CurrentEpochPeriod::<T>::insert(1u32,firstEpoch)
+            CurrentEpochPeriod::<T>::insert(1u32,firstEpoch);
+
         }
     }
 
@@ -1019,7 +1027,8 @@ pub mod pallet {
                 consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
             };
             let expire_incubation = PendingTaskIncubation::<T>::take(
-                now.saturating_sub(T::IncubationLivePeriod::get()),
+                //now.saturating_sub(T::IncubationLivePeriod::get()),
+                now
             );
             expire_incubation
                 .into_iter()
@@ -1046,7 +1055,10 @@ pub mod pallet {
 
             if now >= T::BidMaxPeriod::get() {
                 let expire_bid =
-                    PendingTaskPenguin::<T>::take(now.saturating_sub(T::BidMaxPeriod::get()));
+                    PendingTaskPenguin::<T>::take(
+                        //now.saturating_sub(T::BidMaxPeriod::get())
+                        now
+                    );
                 expire_bid.into_iter().for_each(|(class_id, token_id)| {
                     BidPenguin::<T>::remove((class_id, token_id));
 
@@ -1636,6 +1648,9 @@ pub mod pallet {
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] token_id: TokenIdOf<T>,
         ) -> DispatchResultWithPostInfo {
+
+            log::info!("remove_male_penguin");
+
             ensure_none(origin)?;
             let penguin =
                 Penguins::<T>::take(class_id, token_id).ok_or(Error::<T>::PenguinNoExist)?;
@@ -1647,10 +1662,13 @@ pub mod pallet {
                     let _ :Result<(),DispatchError>= OwnerMalePenguin::<T>::mutate(&owner, |ids| {
                         ids.binary_search(&token_id).map(|index| {
                             ids.remove(index);
+                            log::info!("removed male owner:{:?}, token_id:{:?},class_id:{:?}",owner.clone(),token_id,class_id);
                         }).map_err(|_|Error::<T>::PenguinNoExist)?;
 						Ok(())
                     });
                     MalePenguinCount::<T>::mutate(|value| *value = *value - 1);
+                    Self::deposit_event(Event::<T>::MalePenguinRemoved(class_id, token_id,owner));
+
                 }
             }
             Ok(Pays::No.into())
@@ -1703,7 +1721,7 @@ pub mod pallet {
                             owner: caller.clone(),
                             start: block_number,
                             pre_eat_at: block_number,
-                            eat_count: 0,
+                            eat_count: 1,
                             status: PenguinStatus::Active,
                             asset_id: id,
                             class_id: small_yellow_class_id,
@@ -1720,7 +1738,7 @@ pub mod pallet {
                         .map_err(|_| Error::<T>::NoAvailableClassId)?;
                     let n = <u32>::from_le_bytes(b);
                     log::info!("random number {}", n);
-                    if n % 1000u32 < 200u32 {
+                    if n % 1000u32 < MALE_PENGUIN_RATE {
                         let id = Self::get_next_male_id()?;
                         let male_class_id = MalePenguinClassId::<T>::get();
                         Penguins::<T>::insert(
@@ -1730,7 +1748,7 @@ pub mod pallet {
                                 owner: caller.clone(),
                                 start: block_number,
                                 pre_eat_at: block_number,
-                                eat_count: 0u32,
+                                eat_count: 1u32,
                                 eggs: Default::default(),
                                 status: PenguinStatus::Active,
                                 asset_id: id,
@@ -1753,7 +1771,7 @@ pub mod pallet {
                     }
                 }
                 b @ n if b == low_incubation_class_id => {
-                    let coupon = LowIncubationCoupons::<T>::get(class_id, token_id)
+                    let coupon = IncubationCoupons::<T>::get(class_id, token_id)
                         .ok_or(Error::<T>::IncubationCouponNoExist)?;
                     ensure!(
                         block_number < coupon.start + T::IncubationLivePeriod::get(),
@@ -1782,7 +1800,7 @@ pub mod pallet {
                             owner: caller.clone(),
                             start: block_number,
                             pre_eat_at: block_number,
-                            eat_count: 0,
+                            eat_count: 1,
                             status: PenguinStatus::Active,
                             asset_id: id,
                             class_id: small_yellow_class_id,
@@ -2172,4 +2190,11 @@ impl<T: Config> Pallet<T> {
     pub fn query_male_penguin_num() -> BalanceOf<T> {
         s!(MalePenguinCount::<T>::get())
     }
+
+
+    pub fn print_init_variable() {
+        log::info!("DAYS:{}, MALE_PENGUIN_RATE:{}",DAYS,MALE_PENGUIN_RATE);
+    }
+
+
 }

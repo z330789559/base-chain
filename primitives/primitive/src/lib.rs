@@ -26,7 +26,11 @@ pub const HOURS: BlockNumber = MINUTES * 60;
 #[cfg(ccmtest)]
 pub const DAYS: BlockNumber = 3 * MINUTES;
 
+#[cfg(ccmtest)]
+pub const MALE_PENGUIN_RATE: u32 = 500;
+
 #[cfg(not(ccmtest))]
 pub const DAYS: BlockNumber = 24 * HOURS;
 
-
+#[cfg(not(ccmtest))]
+pub const MALE_PENGUIN_RATE: u32 = 200;
