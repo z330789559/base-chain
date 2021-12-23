@@ -796,7 +796,7 @@ pub mod pallet {
     #[pallet::getter(fn next_incubation_token_id)]
     pub type IncubationTokenId<T: Config> = StorageValue<_, TokenIdOf<T>, ValueQuery>;
 
-    ///高级孵化劵当前id
+    ///低级孵化劵当前id
     #[pallet::storage]
     #[pallet::getter(fn next_low_ncubation_token_id)]
     pub type LowIncubationTokenId<T: Config> = StorageValue<_, TokenIdOf<T>, ValueQuery>;
