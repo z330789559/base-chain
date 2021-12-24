@@ -14,8 +14,6 @@ use sp_runtime::{
     RuntimeDebug,
 };
 use sp_std::vec::Vec;
-mod mock;
-mod tests;
 use frame_support::sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedDiv, CheckedSub, One, Zero};
 use sp_arithmetic::traits::CheckedRem;
 use sp_runtime::traits::BlockNumberProvider;

@@ -3,12 +3,14 @@
 #![cfg(test)]
 
 use super::*;
-use frame_support::{construct_runtime, parameter_types};
+use frame_support::{construct_runtime, parameter_types, PalletId, ord_parameter_types};
 use primitive::*;
 use sp_core::H256;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
+use frame_system::{self as system, EnsureOneOf, EnsureRoot,EnsureSignedBy};
+use sp_runtime::{ Permill};
 
-use crate as nft;
+use crate as penguin_farm;
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
@@ -33,11 +35,11 @@ impl frame_system::Config for Runtime {
     type BlockLength = ();
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type DbWeight = ();
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
@@ -69,8 +71,10 @@ parameter_types! {
     pub const BidMaxPeriod: BlockNumber = 3 * MINUTES;
 }
 
-impl penguin_farm::Config for Runtime {
+impl penguin_farm::Config  for Runtime {
     type Event = Event;
+    type Call = Call;
+    type PalletsOrigin = OriginCaller;
     type Currency = Balances;
     type AssetId = u32;
     type ClassId = u32;
@@ -90,7 +94,7 @@ impl penguin_farm::Config for Runtime {
     type YellowPenguinEggRate = YellowPenguinEggRate;
     type TechnicalPenguinEggRate = TechnicalPenguinEggRate;
     type OperationPenguinEggRate = OperationPenguinEggRate;
-    type MalePenguinRate = MalePenguinRate;
+    // type MalePenguinRate = MalePenguinRate;
     type PenguinProducePeriod = PenguinProducePeriod;
     type YellowPenguinDeadPeriod = YellowPenguinDeadPeriod;
     type SmallYellowPenguinLockPeriod = SmallYellowPenguinLockPeriod;
@@ -102,6 +106,7 @@ impl penguin_farm::Config for Runtime {
     type BidMaxPeriod = BidMaxPeriod;
     type WeightInfo = ();
     type Randomness = RandomnessCollectiveFlip;
+    type Schedule =Scheduler;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -111,6 +116,11 @@ parameter_types! {
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
+
+      // 佣金标识
+	pub const CommissionStorage: PalletId = PalletId(*b"ccm/cosm");
+	// 佣金率
+	pub const CommissionRate: Permill =Permill::from_percent(10);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -125,6 +135,8 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = ();
+    type CommissionStorage = CommissionStorage;
+    type CommissionRate = CommissionRate;
 }
 
 parameter_types! {
@@ -140,7 +152,55 @@ impl pallet_timestamp::Config for Runtime {
     type OnTimestampSet = Aura;
     #[cfg(feature = "manual-seal")]
     type OnTimestampSet = ();
+
+    //自己 加个
+    type OnTimestampSet = ();
 }
+
+parameter_types! {
+		pub MaximumSchedulerWeight: Weight = 100; //Perbill::from_percent(80) * BlockWeights::get().max_block;
+		pub const MaxScheduledPerBlock: u32 = 10;
+	}
+ord_parameter_types! {
+		pub const One: u64 = 1;
+}
+
+impl pallet_scheduler::Config for Runtime {
+    type Event = Event;
+    type Origin = Origin;
+    type PalletsOrigin = OriginCaller;
+    type Call = Call;
+    type MaximumWeight = MaximumSchedulerWeight;
+    type ScheduleOrigin = EnsureRoot<AccountId>;//EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureSignedBy<One, AccountId>>; //EnsureRoot<AccountId>;
+    type MaxScheduledPerBlock = MaxScheduledPerBlock;
+    type WeightInfo = (); //pallet_scheduler::weights::SubstrateWeight<Runtime>;
+}
+
+
+parameter_types! {
+	pub const AssetDeposit: u64 = 1;
+	pub const ApprovalDeposit: u64 = 1;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: u64 = 1;
+	pub const MetadataDepositPerByte: u64 = 1;
+}
+
+impl pallet_assets::Config for Runtime {
+    type Event = Event;
+    type Balance = u128;
+    type AssetId = u32;
+    type Currency = Balances;
+    type ForceOrigin = EnsureRoot<AccountId>;
+    type AssetDeposit = AssetDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type MetadataDepositPerByte = MetadataDepositPerByte;
+    type ApprovalDeposit = ApprovalDeposit;
+    type StringLimit = StringLimit;
+    type Freezer = ();
+    type Extra = ();
+    type WeightInfo = ();//pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -152,10 +212,12 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} =2 ,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} =2 ,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} =3,
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} =4 ,
-        Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config<T>}=20,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>}=13,
+        Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=20,
+        Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=21,
     }
 );
 

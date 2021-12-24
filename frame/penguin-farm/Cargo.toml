@@ -32,6 +32,8 @@ primitive={default-features = false, path="../../primitives/primitive"}
 [dev-dependencies]
 sp-io = { version = "4.0.0-dev", git = "http://47.102.99.229:17000/block-chain/substrate-v2", default-features = false }
 sp-core = { version = "4.0.0-dev", git = "http://47.102.99.229:17000/block-chain/substrate-v2", default-features = false }
+pallet-balances = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+pallet-randomness-collective-flip = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 
 [features]
 default = ["std"]
