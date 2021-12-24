@@ -5,7 +5,7 @@
 use super::*;
 use frame_support::{assert_noop, assert_ok};
 use mock::*;
-
+use sp_std::default::Default;
 
 #[test]
 fn hello_world_is_ok() {
@@ -13,6 +13,85 @@ fn hello_world_is_ok() {
         assert_eq!(1,1);
     });
 }
+
+
+#[test]
+fn force_set_admin_ok() {
+    ExtBuilder::default().new_test_ext(1).execute_with(|| {
+        //System::set_block_number(10);
+        let user_1: <Runtime as frame_system::Config>::AccountId =1 as u64;
+        let caller =Origin::root();
+        assert_ok!(Farm::force_set_admin(caller, user_1));
+
+        assert_eq!(Admin::<Runtime>::get(), vec![1 as u64]);
+    });
+}
+
+#[test]
+fn force_set_admin_already_ok() {
+    ExtBuilder::default().new_test_ext(1).execute_with(|| {
+        let root =1;
+        let user_b: <Runtime as frame_system::Config>::AccountId =2 as u64;
+        let caller =Origin::root();
+        Farm::force_set_admin(caller.clone(), user_b);
+        assert_noop!(Farm::force_set_admin(caller.clone(), user_b), Error::<Runtime>::AdminHadExist);
+    });
+}
+
+
+#[test]
+fn revert_admin_ok() {
+    ExtBuilder::default().new_test_ext(1).execute_with(|| {
+        let user_b: <Runtime as frame_system::Config>::AccountId =2 as u64;
+        let caller =Origin::root();
+        assert_ok!(Farm::force_set_admin(caller.clone(), user_b));
+        assert_ok!(Farm::revert_admin(caller.clone(), user_b));
+        let empty:Vec<u64> =vec![];
+        assert_eq!(Admin::<Runtime>::get(), empty);
+    });
+}
+
+#[test]
+fn revert_not_exist_admin_failed_ok() {
+    ExtBuilder::default().new_test_ext(1).execute_with(|| {
+        let user_b: <Runtime as frame_system::Config>::AccountId =2 as u64;
+        let caller =Origin::root();
+        assert_noop!(Farm::revert_admin(caller.clone(), user_b), <Error<Runtime>>::AdminNoExist);
+    });
+}
+
+
+fn set_1_as_admin() {
+        let user_1: <Runtime as frame_system::Config>::AccountId =1 as u64;
+        Farm::force_set_admin(Origin::root(), user_1);
+}
+
+#[test]
+fn move_in_ok() {
+    ExtBuilder::default().new_test_ext(1).execute_with(|| {
+        System::set_block_number(2);
+        set_1_as_admin();
+        let user_admin = 1 as u64;
+        let user_b: <Runtime as frame_system::Config>::AccountId =2 as u64;
+        let caller =Origin::signed(user_admin);
+        Farm::move_in(caller, 0 as u32, user_b);
+        let red = Penguins::<Runtime>::get(0 as u32, 0);
+        assert_eq!(red, Some(PenguinFarmOf::<Runtime>::RedPenguin(RedPenguin{
+            owner: user_b,
+            start: 2u32.into(),
+            pre_eat_at: 2u32.into(),
+            eat_count: 1,
+            status: PenguinStatus::Active,
+            eggs: Default::default(),
+            asset_id: 0 as u64,
+            class_id: 0 as u32,
+            incubation_remain: 0 as u128
+        })))
+    });
+}
+
+
+
 
 
 

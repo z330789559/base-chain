@@ -34,6 +34,7 @@ sp-io = { version = "4.0.0-dev", git = "http://47.102.99.229:17000/block-chain/s
 sp-core = { version = "4.0.0-dev", git = "http://47.102.99.229:17000/block-chain/substrate-v2", default-features = false }
 pallet-balances = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-randomness-collective-flip = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+pallet-sudo = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 
 [features]
 default = ["std"]
@@ -49,7 +50,8 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-assets/std",
-	"sp-arithmetic/std"
+	"sp-arithmetic/std",
+	"pallet-sudo/std",
 
 ]
 try-runtime = ["frame-support/try-runtime"]

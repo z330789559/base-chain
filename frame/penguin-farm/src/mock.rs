@@ -16,7 +16,7 @@ parameter_types! {
     pub const BlockHashCount: u64 = 250;
 }
 
-pub type AccountId = u128;
+pub type AccountId = u64;
 pub type BlockNumber = u64;
 
 impl frame_system::Config for Runtime {
@@ -201,6 +201,11 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = ();//pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_sudo::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+}
+
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -216,6 +221,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} =3,
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} =4 ,
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>}=13,
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>}=17,
         Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=20,
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=21,
     }
@@ -238,12 +244,26 @@ impl Default for ExtBuilder {
 
 impl ExtBuilder {
     pub fn build(self) -> sp_io::TestExternalities {
-        let t = frame_system::GenesisConfig::default()
+        let mut t = frame_system::GenesisConfig::default()
             .build_storage::<Runtime>()
             .unwrap();
+
+        /*pallet_balances::GenesisConfig::<Runtime> {
+            balances: vec![(1, 10000), (2, 20000), (3, 30000)],
+        }.assimilate_storage(&mut t)
+            .unwrap();*/
 
         let mut ext = sp_io::TestExternalities::new(t);
         ext.execute_with(|| System::set_block_number(1));
         ext
+    }
+
+    // Build test environment by setting the root `key` for the Genesis.
+    pub fn new_test_ext(self, root_key: u64) -> sp_io::TestExternalities {
+        let mut stro = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        pallet_sudo::GenesisConfig::<Runtime> { key: root_key }
+            .assimilate_storage(&mut stro)
+            .unwrap();
+        stro.into()
     }
 }
