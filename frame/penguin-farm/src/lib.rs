@@ -809,7 +809,7 @@ pub mod pallet {
     #[pallet::getter(fn incubation_coupon_asset_id)]
     pub type IncubationCouponClassId<T: Config> = StorageValue<_, ClassIdOf<T>, ValueQuery>;
 
-    ///低级孵化劵id
+    ///低级孵化劵类别id
     #[pallet::storage]
     #[pallet::getter(fn low_incubation_coupon_asset_id)]
     pub type LowIncubationCouponClassId<T: Config> = StorageValue<_, ClassIdOf<T>, ValueQuery>;
@@ -1009,6 +1009,7 @@ pub mod pallet {
                 }
                 let next_end_point = CurrentEpochPeriod::<T>::get(current_epoch + 1);
                 let block: u128 = s!(next_end_point - now);
+
                 let eggs_per_day = remain_balance
                     .checked_div(&block.into())
                     .expect("cal eggs_per_day error");

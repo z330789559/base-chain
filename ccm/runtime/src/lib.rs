@@ -702,7 +702,7 @@ impl orml_nft::Config for Runtime {
 }
 
 parameter_types! {
-    pub const InitTotalSupply: Balance= 10000000000 * DOLLARS;
+    pub const InitTotalSupply: Balance= 10_000_000_000 * DOLLARS;
     pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
     pub const MalePenguinEggLimit: Balance = 5000 * DOLLARS;
     //14 days

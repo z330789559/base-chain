@@ -91,6 +91,20 @@ fn move_in_ok() {
 }
 
 
+#[test]
+fn saturated_into_positive () {
+    let mut block: <Runtime as frame_system::Config>::BlockNumber =2 as u64;
+    let mut block_u: u32= sp_runtime::SaturatedConversion::saturated_into(block);
+    println!("block_id:{}",block_u);
+
+    let block_neg_i = -5 as i64;
+    block_u = sp_runtime::SaturatedConversion::saturated_into(block_neg_i);
+    println!("block_id:{}",block_u);
+
+    let block_neg_i_2 = -5 as i64;
+    let block_i32: i32 = sp_runtime::SaturatedConversion::saturated_into(block_neg_i_2);
+    println!("block_i32:{}",block_i32);
+}
 
 
 
