@@ -24,7 +24,7 @@ RUST_LOG="debug"
 --unsafe-ws-external \
 --bootnodes /ip4/127.0.0.1/tcp/30334/p2p/12D3KooWFsLQAmNCpxgeeXY9mH9DgqgchutwmSL2wqeaAhhbG1R4 \
 --rpc-methods=unsafe \
--lruntime=debug > ccm-log1.out 2>&1 &
+-lruntime=debug > ccm-log2.out 2>&1 &
 
 /data/ccm/ccmrun/ccm-node \
 --base-path /data/ccm/ccmrun/blocks/blocks/cc1 \
@@ -42,7 +42,7 @@ RUST_LOG="debug"
 --unsafe-ws-external \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWB6bcZYvH4iRih9HndMGsSYdVMA1xjN1gJyq6ifYxprYN \
 --rpc-methods=unsafe \
--lruntime=debug > ccm-log2.out 2>&1 &
+-lruntime=debug > ccm-log1.out 2>&1 &
 
 echo $RUST_LOG
 

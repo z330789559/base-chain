@@ -30,6 +30,9 @@ use sp_runtime::{
     transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
     ApplyExtrinsicResult, Percent,
 };
+
+use sp_runtime::traits::AccountIdConversion;  // 这个必须加在pub mod pallet 外面？
+
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
@@ -44,7 +47,7 @@ use frame_support::PalletId;
 
 pub use frame_support::{
     construct_runtime, parameter_types,
-    traits::{FindAuthor, KeyOwnerProofSystem, Randomness,LockIdentifier},
+    traits::{FindAuthor, KeyOwnerProofSystem, Randomness,LockIdentifier,Imbalance},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},DispatchClass,
         IdentityFee, Weight,
@@ -526,7 +529,19 @@ type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
 pub struct DealWithFees;
 impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance>) {
-		if let Some(fees) = fees_then_tips.next() {
+
+
+        let mut total=fees_then_tips.fold(NegativeImbalance::zero(),|sum,i| sum.merge(i)).peek();
+        let address =CommissionStorage::get().into_account();
+        log::info!("DealWithFees:address:{:?} got fees:{:?}",address,total);
+        let min =Balances::minimum_balance();
+        let free=Balances::free_balance(address);
+        if (free+total)<min {
+            total+=(min-free);
+        }
+        Balances::deposit_creating(&address, total);
+
+		/*if let Some(fees) = fees_then_tips.next() {
 			// for fees, 80% to treasury, 20% to author
 			// let mut split = fees.ration(80, 20);
 			// if let Some(tips) = fees_then_tips.next() {
@@ -534,7 +549,7 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 			// 	tips.ration_merge_into(80, 20, &mut split);
 			// }
 			Treasury::on_unbalanced(fees);
-		}
+		}*/
 	}
 }
 
