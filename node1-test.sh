@@ -6,7 +6,7 @@ set -x
 echo "check RUST_MIN_STACK:"
 echo $RUST_MIN_STACK
 
-RUST_LOG="debug"
+export RUST_LOG="debug"
 
 /data/ccm/ccmrun/ccm-node \
 --base-path /data/ccm/ccmrun/blocks/blocks/cc0 \

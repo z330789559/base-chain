@@ -58,13 +58,14 @@ pub fn development_config() -> Result<ChainSpec, String> {
                 AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
                 // Pre-funded accounts
                 vec![
+                    AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
                     AccountId::from_str("0x7cb821cB086B979a6eD429543859c1A9eFE0928c").unwrap(),
                     AccountId::from_str("0x9d9B0A61b4E0B60C9e91E87362C31C261eE22Eae").unwrap(),
                     AccountId::from_str("0x2c95eDE69Da04b2cdB1c7873c0e2ea8Fb121a596").unwrap(),
                     AccountId::from_str("0x3fcAA1E75397b4Ad18Be21036e6Cc28bC97F602A").unwrap(),
                     AccountId::from_str("0x5EF1068Db4e1e3CA3551a574aa1397d4dC4422bB").unwrap(),
                     AccountId::from_str("0xef11BbD0653255294eF8927b7fa15015d911Bba3").unwrap(),
-                    AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+
                 ],
                 true,
             )
@@ -121,6 +122,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
                 // Pre-funded accounts
                 vec![
+                    AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),
                     AccountId::from_str("0x2c95eDE69Da04b2cdB1c7873c0e2ea8Fb121a596").unwrap(),
                     AccountId::from_str("0x3fcAA1E75397b4Ad18Be21036e6Cc28bC97F602A").unwrap(),
                     AccountId::from_str("0x5EF1068Db4e1e3CA3551a574aa1397d4dC4422bB").unwrap(),
@@ -129,7 +131,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                     AccountId::from_str("0x5f807d760E50fFedb492bcAA3220115d97D95AC6").unwrap(),
                     AccountId::from_str("0xc1432Db8842742937E8b27475C9a220e63C2cCaD").unwrap(),
                     AccountId::from_str("0x9f883b12fd0692714c2f28be6c40d3afdb9081d3").unwrap(),
-                    AccountId::from_str("0x6da573eec80f63c98b88ced15d32ca270787fb5a").unwrap(),
+
                 ],
                 true,
             )
@@ -251,11 +253,11 @@ fn testnet_genesis(
         node_authorization: NodeAuthorizationConfig {
             nodes: vec![
                 (
-                    OpaquePeerId(bs58::decode("12D3KooWBmAwcd4PJNJvfV89HwE48nwkRmAgo8Vy3uQEyNNHBox2").into_vec().unwrap()),
+                    OpaquePeerId(bs58::decode("12D3KooWFsLQAmNCpxgeeXY9mH9DgqgchutwmSL2wqeaAhhbG1R4").into_vec().unwrap()),
                     endowed_accounts[0].clone()
                 ),
                 (
-                    OpaquePeerId(bs58::decode("12D3KooWQYV9dGMFoRzNStwpXztXaBUjtPqi6aU76ZgUriHhKust").into_vec().unwrap()),
+                    OpaquePeerId(bs58::decode("12D3KooWB6bcZYvH4iRih9HndMGsSYdVMA1xjN1gJyq6ifYxprYN").into_vec().unwrap()),
                     endowed_accounts[1].clone()
                 ),
             ],

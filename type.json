@@ -275,5 +275,6 @@
     "ayes": "Vec<AccountId>",
     "nays": "Vec<AccountId>",
     "end": "BlockNumber"
-  }
+  },
+  "PeerId": "Vec<u8>"
 }
