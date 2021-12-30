@@ -123,7 +123,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("ccm"),
     impl_name: create_runtime_str!("ccm"),
     authoring_version: 1,
-    spec_version: 7,
+    spec_version: 9,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -475,6 +475,23 @@ parameter_types! {
     pub const MaxApprovals: u32 = 100;
 }
 
+parameter_types! {
+    pub const MaxWellKnownNodes: u32 = 8;
+    pub const MaxPeerIdLength: u32 = 128;
+}
+
+impl pallet_node_authorization::Config for Runtime {
+    type Event = Event;
+    type MaxWellKnownNodes = MaxWellKnownNodes;
+    type MaxPeerIdLength = MaxPeerIdLength;
+    type AddOrigin = EnsureRoot<AccountId>;
+    type RemoveOrigin = EnsureRoot<AccountId>;
+    type SwapOrigin = EnsureRoot<AccountId>;
+    type ResetOrigin = EnsureRoot<AccountId>;
+    type WeightInfo = ();
+}
+
+
 impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryModuleId;
     type Currency = Balances;
@@ -814,7 +831,8 @@ construct_runtime!(
         Assets: pallet_assets::{Pallet, Call, Storage,Event<T>}=21,
         // BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
         Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=22,
-			Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>}=23,
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>}=23,
+        NodeAuthorization: pallet_node_authorization::{Pallet, Call, Storage, Event<T>, Config<T>}=24,
 
     }
 );

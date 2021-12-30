@@ -578,6 +578,8 @@ pub mod pallet {
         FeedPenguinSuccess(ClassIdOf<T>, TokenIdOf<T>),
         ///公企鹅🐧被移除，Male Penguin removed
         MalePenguinRemoved(ClassIdOf<T>, TokenIdOf<T>,AccountIdOf<T>),
+        ///手续费收取
+        FeeCollected(AccountIdOf<T>, BalanceOf<T>),
     }
 
     /// Error for non-fungible-token module.

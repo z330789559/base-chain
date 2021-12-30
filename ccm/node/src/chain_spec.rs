@@ -1,13 +1,13 @@
 
 
-use ccm_runtime::{AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig, FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY, Balance, DOLLARS};
+use ccm_runtime::{AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig, FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig, GrandpaConfig,NodeAuthorizationConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY, Balance, DOLLARS};
 // FarmConfig,
 use hex_literal::hex;
 use penguin_farm::{PenguinConfig, PenguinStatus};
 use sc_service::ChainType;
 use serde_json::json;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::UncheckedInto, Pair, Public, H160, U256};
+use sp_core::{crypto::UncheckedInto, Pair, Public, H160, U256,OpaquePeerId};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::{collections::BTreeMap, str::FromStr};
@@ -248,5 +248,17 @@ fn testnet_genesis(
         ethereum: EthereumConfig {},
         dynamic_fee: Default::default(),
         farm: FarmConfig {},
+        node_authorization: NodeAuthorizationConfig {
+            nodes: vec![
+                (
+                    OpaquePeerId(bs58::decode("12D3KooWBmAwcd4PJNJvfV89HwE48nwkRmAgo8Vy3uQEyNNHBox2").into_vec().unwrap()),
+                    endowed_accounts[0].clone()
+                ),
+                (
+                    OpaquePeerId(bs58::decode("12D3KooWQYV9dGMFoRzNStwpXztXaBUjtPqi6aU76ZgUriHhKust").into_vec().unwrap()),
+                    endowed_accounts[1].clone()
+                ),
+            ],
+        },
     }
 }

@@ -32,6 +32,7 @@ pallet-nft = { default-features = false, path = "../../frame/nft" }
 orml-nft  = { default-features = false, path = "../../frame/orml/nft" }
 penguin-farm  = { default-features = false, path = "../../frame/penguin-farm" }
 
+pallet-node-authorization = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-dynamic-fee = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2" }
 pallet-evm-precompile-simple = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2" }
 pallet-evm-precompile-sha3fips = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2" }
@@ -104,6 +105,7 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	'pallet-node-authorization/std',
     "pallet-treasury/std",
 	"pallet-bounties/std",
 	"sp-api/std",
@@ -120,6 +122,7 @@ std = [
 	"sp-version/std",
 	"frame-benchmarking/std",
 	"frame-system-benchmarking/std",
+	"penguin-farm/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
