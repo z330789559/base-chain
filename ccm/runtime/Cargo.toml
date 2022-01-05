@@ -31,6 +31,8 @@ pallet-evm = { default-features = false,  git = "http://47.102.99.229:17000/bloc
 pallet-nft = { default-features = false, path = "../../frame/nft" }
 orml-nft  = { default-features = false, path = "../../frame/orml/nft" }
 penguin-farm  = { default-features = false, path = "../../frame/penguin-farm" }
+validatorset  = { default-features = false, path = "../../frame/validator-set", package = 'validator-set' }
+
 
 pallet-node-authorization = { version = "4.0.0-dev", default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-dynamic-fee = { default-features = false,  git = "http://47.102.99.229:17000/block-chain/frontiner-v2" }
@@ -44,6 +46,7 @@ pallet-randomness-collective-flip = { default-features = false, git = "http://47
 pallet-sudo = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-timestamp = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-transaction-payment = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
+pallet-session = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-transaction-payment-rpc-runtime-api = { default-features = false, git = "http://47.102.99.229:17000/block-chain/substrate-v2" }
 pallet-assets = { default-features = false, path="../../frame/assets" }
 primitive={default-features = false, path="../../primitives/primitive"}
@@ -123,6 +126,8 @@ std = [
 	"frame-benchmarking/std",
 	"frame-system-benchmarking/std",
 	"penguin-farm/std",
+	"validatorset/std",
+	"pallet-session/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

@@ -276,5 +276,9 @@
     "nays": "Vec<AccountId>",
     "end": "BlockNumber"
   },
-  "PeerId": "Vec<u8>"
+  "PeerId": "Vec<u8>",
+  "Keys": {
+    "aura": "[u8;32]",
+    "grandpa": "[u8;32]"
+  }
 }

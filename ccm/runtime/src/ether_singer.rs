@@ -1,7 +1,7 @@
 use codec::{Decode, Encode};
 use frame_support::log;
 use sha3::{Digest, Keccak256};
-use sp_core::{ecdsa, H160, H256};
+use sp_core::{ecdsa, H160, H256, crypto::{CryptoTypePublicPair,Public as TraitPublic,}};
 
 #[cfg(feature = "std")]
 pub use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -83,3 +83,20 @@ impl std::fmt::Display for EthereumSigner {
         write!(fmt, "ethereum signature: {:?}", H160::from_slice(&self.0))
     }
 }
+
+
+/*impl TraitPublic for EthereumSigner {
+    /// A new instance from the given slice that should be 32 bytes long.
+    ///
+    /// NOTE: No checking goes on to ensure this is a real public key. Only use it if
+    /// you are certain that the array actually is a pubkey. GIGO!
+    fn from_slice(data: &[u8]) -> Self {
+        let mut r = [0u8; 20];
+        r.copy_from_slice(data);
+        EthereumSigner(r)
+    }
+
+    fn to_public_crypto_pair(&self) -> CryptoTypePublicPair {
+        CryptoTypePublicPair(ecdsa::CRYPTO_ID, self.to_raw_vec())
+    }
+}*/

@@ -1,6 +1,15 @@
 
 
-use ccm_runtime::{AccountId, AuraConfig, BalancesConfig, CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig, FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig, GrandpaConfig,NodeAuthorizationConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY, Balance, DOLLARS};
+use ccm_runtime::{AccountId, AuraConfig, BalancesConfig,
+                  CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig,
+                  FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig,
+                  GrandpaConfig,
+                  Signature, SudoConfig, SystemConfig,
+                  ValidatorSetConfig,
+                  SessionConfig,
+                  opaque::SessionKeys,
+                  EthereumSigner,
+                  WASM_BINARY, Balance, DOLLARS};
 // FarmConfig,
 use hex_literal::hex;
 use penguin_farm::{PenguinConfig, PenguinStatus};
@@ -17,6 +26,14 @@ use std::{collections::BTreeMap, str::FromStr};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
+
+/// compose a session-key objects.
+fn session_keys(
+    aura: AuraId,
+    grandpa: GrandpaId,
+) -> SessionKeys {
+    SessionKeys { aura, grandpa }
+}
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -35,9 +52,12 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Generate an Aura authority key.
+/// Generate an Aura GrandpaId authority key.
 pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-    (get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
+    (
+        get_from_seed::<AuraId>(s),
+        get_from_seed::<GrandpaId>(s)
+    )
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
@@ -53,7 +73,14 @@ pub fn development_config() -> Result<ChainSpec, String> {
             testnet_genesis(
                 wasm_binary,
                 // Initial PoA authorities
-                vec![authority_keys_from_seed("Alice")],
+                vec![
+                    (
+                        AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+                        get_from_seed::<AuraId>("Alice"),
+                        get_from_seed::<GrandpaId>("Alice"),
+                    ),
+                ],
+                //vec![authority_keys_from_seed("Alice")],
                 // Sudo account
                 AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
                 // Pre-funded accounts
@@ -94,6 +121,21 @@ pub fn development_config() -> Result<ChainSpec, String> {
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
+    let (acc,au,gp): (AccountId, AuraId, GrandpaId) =(
+        AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+        hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"]
+            .unchecked_into(),
+        hex!["8fcd4ac76751ca962f1fe92713c12710f4bdf9c23100baa0030b463aa6218fb8"]
+            .unchecked_into(),
+    );
+
+    //let acc_58=bs58::encode(acc.as_ref()).into_string();
+    //let auro_58=bs58::encode(au.as_ref()).into_string();
+    //let gp_58=bs58::encode(gp.as_ref()).into_string();
+    //log::error!("accid:{},auro:{},gran:{}",acc_58,auro_58,gp_58);
+
+    //log::error!("account:{:?}, auraId:{:?}, gran:{:?}",bs58::encode(acc.as_ref()), au.as_ref(),gp.as_ref() );
+
     Ok(ChainSpec::from_genesis(
         // Name
         "ccm Testnet",
@@ -106,15 +148,17 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                 // Initial PoA authorities
                 vec![
                     (
-                        hex!["8e63609d78e8b07eff0ad673ece04798df19443ec74fdf7f6157190d0806643d"]
+                        AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+                        hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"]
                             .unchecked_into(),
-                        hex!["8a4d5bfc684ae1b1e48c4cb3f6b8ad663f7b3434513edf91e5243a0b1a279536"]
+                        hex!["8fcd4ac76751ca962f1fe92713c12710f4bdf9c23100baa0030b463aa6218fb8"]
                             .unchecked_into(),
                     ),
                     (
-                        hex!["e4924c61e4764e8824da0cb3da6a35f789a19b6e8f5fb918aa502f63bc35fe0d"]
+                        AccountId::from_str("0x7cb821cB086B979a6eD429543859c1A9eFE0928c").unwrap(),
+                        hex!["72b8edbe194dfa3973bf16c2f67de0d369f706a50ce75598ce719a23709ec761"]
                             .unchecked_into(),
-                        hex!["e94b5c662fe1a20f2f41b02b5a90066b5633fce1ac6e5058cb4d2d52446dc8dc"]
+                        hex!["f3adf3464c7f62f7d5f546ad7d4ec878451b62e239fad3833feac6cf12559eff"]
                             .unchecked_into(),
                     ),
                 ],
@@ -160,7 +204,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 /// Configure initial storage state for FRAME modules.
 fn testnet_genesis(
     wasm_binary: &[u8],
-    initial_authorities: Vec<(AuraId, GrandpaId)>,
+    initial_authorities: Vec<(AccountId, AuraId, GrandpaId)>,
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
@@ -181,6 +225,14 @@ fn testnet_genesis(
                 .map(|k| (k, 1 << 70))
                 .collect(),
         },
+        validator_set: ValidatorSetConfig {
+            validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+        },
+        session: SessionConfig {
+            keys: initial_authorities.iter().map(|x| {
+                (x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
+            }).collect::<Vec<_>>(),
+        },
 		elections: ElectionsConfig {
 			members: endowed_accounts
 				.iter()
@@ -190,13 +242,10 @@ fn testnet_genesis(
 				.collect(),
 		},
         aura: AuraConfig {
-            authorities: initial_authorities.iter().map(|x| (x.0.clone())).collect(),
+            authorities: vec![],
         },
         grandpa: GrandpaConfig {
-            authorities: initial_authorities
-                .iter()
-                .map(|x| (x.1.clone(), 1))
-                .collect(),
+            authorities: vec![],
         },
         sudo: SudoConfig {
             // Assign network admin rights.
@@ -250,17 +299,43 @@ fn testnet_genesis(
         ethereum: EthereumConfig {},
         dynamic_fee: Default::default(),
         farm: FarmConfig {},
-        node_authorization: NodeAuthorizationConfig {
+        /*node_authorization: NodeAuthorizationConfig {
             nodes: vec![
                 (
                     OpaquePeerId(bs58::decode("12D3KooWFsLQAmNCpxgeeXY9mH9DgqgchutwmSL2wqeaAhhbG1R4").into_vec().unwrap()),
-                    endowed_accounts[0].clone()
+                    root_key.clone()
                 ),
                 (
                     OpaquePeerId(bs58::decode("12D3KooWB6bcZYvH4iRih9HndMGsSYdVMA1xjN1gJyq6ifYxprYN").into_vec().unwrap()),
-                    endowed_accounts[1].clone()
+                    endowed_accounts[0].clone()
                 ),
             ],
-        },
+        },*/
     }
+}
+
+
+#[cfg(test)]
+mod tests{
+
+    use super::*;
+
+    #[test]
+    fn hello_world_is_ok() {
+        let (acc,au,gp): (AccountId, AuraId, GrandpaId) =(
+            AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+            hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"]
+                .unchecked_into(),
+            hex!["8fcd4ac76751ca962f1fe92713c12710f4bdf9c23100baa0030b463aa6218fb8"]
+                .unchecked_into(),
+        );
+
+        let acc_58=bs58::encode(acc.as_ref()).into_string();
+        let auro_58=bs58::encode(au.as_ref()).into_string();
+        let gp_58=bs58::encode(gp.as_ref()).into_string();
+        println!("accid:{},auro:{},gran:{}",acc_58,auro_58,gp_58)
+    }
+
+
+
 }

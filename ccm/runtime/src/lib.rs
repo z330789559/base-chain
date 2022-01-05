@@ -25,7 +25,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{
         BlakeTwo256, Block as BlockT, Dispatchable, IdentifyAccount, NumberFor, PostDispatchInfoOf,
-        Verify,
+        Verify,OpaqueKeys,
     },
     transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
     ApplyExtrinsicResult, Percent,
@@ -480,7 +480,7 @@ parameter_types! {
     pub const MaxPeerIdLength: u32 = 128;
 }
 
-impl pallet_node_authorization::Config for Runtime {
+/*impl pallet_node_authorization::Config for Runtime {
     type Event = Event;
     type MaxWellKnownNodes = MaxWellKnownNodes;
     type MaxPeerIdLength = MaxPeerIdLength;
@@ -489,7 +489,7 @@ impl pallet_node_authorization::Config for Runtime {
     type SwapOrigin = EnsureRoot<AccountId>;
     type ResetOrigin = EnsureRoot<AccountId>;
     type WeightInfo = ();
-}
+}*/
 
 
 impl pallet_treasury::Config for Runtime {
@@ -733,6 +733,24 @@ impl orml_nft::Config for Runtime {
     type TokenId = u64;
 }
 
+impl validatorset::Config for Runtime {
+    type Event = Event;
+    type AddRemoveOrigin = EnsureRoot<AccountId>;
+}
+
+impl pallet_session::Config for Runtime {
+    type SessionHandler = <opaque::SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
+    type ShouldEndSession = ValidatorSet;
+    type SessionManager = ValidatorSet;
+    type Event = Event;
+    type Keys = opaque::SessionKeys;
+    type NextSessionRotation = ValidatorSet;
+    type ValidatorId = <Self as frame_system::Config>::AccountId;
+    type ValidatorIdOf = validatorset::ValidatorOf<Self>;
+    type DisabledValidatorsThreshold = ();
+    type WeightInfo = ();
+}
+
 parameter_types! {
     pub const InitTotalSupply: Balance= 10_000_000_000 * DOLLARS;
     pub const InitSupplyPeriod: BlockNumber= 30 * 12 * 5 * DAYS;
@@ -812,8 +830,9 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} =2 ,
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} =3,
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} =4 ,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} =50,
+		ValidatorSet: validatorset::{Pallet, Call, Storage, Event<T>, Config<T>} =55,
         Aura: pallet_aura::{Pallet, Config<T>} =5 ,
-
          Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} =7 ,
         Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} =8 ,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage} =9 ,
@@ -832,7 +851,7 @@ construct_runtime!(
         // BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event}=19,
         Farm: penguin_farm::{Pallet, Call, Storage, Event<T>,Config}=22,
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>}=23,
-        NodeAuthorization: pallet_node_authorization::{Pallet, Call, Storage, Event<T>, Config<T>}=24,
+        // NodeAuthorization: pallet_node_authorization::{Pallet, Call, Storage, Event<T>, Config<T>}=24,
 
     }
 );

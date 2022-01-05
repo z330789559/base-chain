@@ -6,6 +6,7 @@ members = [
 #	"frame/balances",
 	"frame/nft",
 	"frame/penguin-farm",
+	"frame/validator-set",
 	"frame/orml/nft",
 	"frame/orml/traits",
 #	"frame/evm/precompile/sha3fips",

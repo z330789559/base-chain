@@ -1,0 +1,79 @@
+[package]
+name = 'validator-set'
+version = '4.0.0-dev'
+authors = ['Gautam Dhameja <quasijatt@outlook.com>']
+edition = '2018'
+license = 'Apache-2.0'
+repository = 'https://github.com/gautamdhameja/substrate-validator-set'
+
+[dev-dependencies.serde]
+features = ['derive']
+version = '1.0.126'
+
+# 打日志
+[dependencies.log]
+version = "0.4.14"
+default-features = false
+
+[dependencies.sp-core]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.sp-io]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.sp-runtime]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.sp-std]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+optional = true
+version = '4.0.0-dev'
+
+[dependencies.frame-support]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.frame-system]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[dependencies.pallet-session]
+default-features = false
+git = "http://47.102.99.229:17000/block-chain/substrate-v2"
+version = '4.0.0-dev'
+
+[features]
+default = ['std']
+runtime-benchmarks = ['frame-benchmarking']
+std = [
+    'codec/std',
+    'frame-benchmarking/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-core/std',
+    'sp-io/std',
+    'sp-std/std',
+    'sp-runtime/std',
+    'pallet-session/std'
+]
+try-runtime = ['frame-support/try-runtime']
