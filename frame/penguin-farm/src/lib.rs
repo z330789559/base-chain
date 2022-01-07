@@ -1554,7 +1554,7 @@ pub mod pallet {
                         Error::<T>::PenguinNoHunger
                     );
                     //企鹅死亡
-                    if block_number > pre_eat_at + T::MalePenguinLifeSpan::get() {
+                    /*if block_number > pre_eat_at + T::MalePenguinLifeSpan::get() {
                         Penguins::<T>::remove(class_id, token_id);
                         OwnerMalePenguin::<T>::try_mutate(&owner, |ids| {
                             ids.binary_search(&token_id).map(|index| ids.remove(index))
@@ -1562,7 +1562,7 @@ pub mod pallet {
                         .map_err(|_| Error::<T>::RemoveMalePenguinError)?;
                         MalePenguinCount::<T>::mutate(|value| *value = *value - 1);
                         Self::deposit_event(Event::<T>::PenguinDead(class_id, token_id));
-                    } else {
+                    } else {*/
                         new_penguin.eat_count = 1;
                         new_penguin.pre_eat_at = block_number;
                         new_penguin.status = PenguinStatus::Active;
@@ -1573,7 +1573,7 @@ pub mod pallet {
                             );
                         });
                         Self::deposit_event(Event::<T>::FeedPenguinSuccess(class_id, token_id));
-                    }
+                    //}
                 }
                 PenguinFarm::SmallYellowPenguin(small_yellow_penguin) => {
                     let mut new_penguin = small_yellow_penguin.clone();

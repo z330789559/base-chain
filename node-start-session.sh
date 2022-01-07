@@ -9,7 +9,7 @@ echo "check RUST_MIN_STACK: $RUST_MIN_STACK"
 
 echo "start node1"
 
-./ccm-node-session \
+nohup ./ccm-node-session \
 --chain=local \
 --base-path /tmp/ccm/node1 \
 --name alice \
@@ -34,7 +34,7 @@ echo $! > "node1.pid"
 sleep 20
 echo "start node2"
 
-./ccm-node-session \
+nohup ./ccm-node-session \
 --chain=local \
 --base-path /tmp/ccm/node2 \
 --name bob \
@@ -59,7 +59,7 @@ echo $! > "node2.pid"
 sleep 20
 echo "start node3"
 
-./ccm-node-session \
+nohup ./ccm-node-session \
 --chain=local \
 --base-path /tmp/ccm/node3 \
 --name charlie \
@@ -84,7 +84,7 @@ echo $! > "node3.pid"
 sleep 20
 echo "start node4"
 
-./ccm-node-session \
+nohup ./ccm-node-session \
 --chain=local \
 --base-path /tmp/ccm/node4 \
 --name dave  \
@@ -92,7 +92,7 @@ echo "start node4"
 --port 30336 \
 --ws-port=9944 \
 --rpc-port 9936 \
---pruning archive \
+--validator \
 --rpc-cors all \
 --execution native \
 --unsafe-rpc-external \
