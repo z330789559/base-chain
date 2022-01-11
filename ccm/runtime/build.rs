@@ -5,6 +5,6 @@ fn main() {
         .with_current_project()
         .export_heap_base()
         .import_memory()
-		.append_to_rust_flags("-C opt-level=z")
+        .append_to_rust_flags("-C opt-level=z")
         .build()
 }

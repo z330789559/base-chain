@@ -1,22 +1,16 @@
-
-
-use ccm_runtime::{AccountId, AuraConfig, BalancesConfig,
-                  CouncilConfig, EVMConfig, EthereumConfig, ElectionsConfig,
-                  FarmConfig, DemocracyConfig, TechnicalCommitteeConfig, GenesisConfig,
-                  GrandpaConfig,
-                  Signature, SudoConfig, SystemConfig,
-                  ValidatorSetConfig,
-                  SessionConfig,
-                  opaque::SessionKeys,
-                  EthereumSigner,
-                  WASM_BINARY, Balance, DOLLARS};
+use ccm_runtime::{
+    opaque::SessionKeys, AccountId, AuraConfig, Balance, BalancesConfig, CouncilConfig,
+    DemocracyConfig, EVMConfig, ElectionsConfig, EthereumConfig, EthereumSigner, FarmConfig,
+    GenesisConfig, GrandpaConfig, SessionConfig, Signature, SudoConfig, SystemConfig,
+    TechnicalCommitteeConfig, ValidatorSetConfig, DOLLARS, WASM_BINARY,
+};
 // FarmConfig,
 use hex_literal::hex;
 use penguin_farm::{PenguinConfig, PenguinStatus};
 use sc_service::ChainType;
 use serde_json::json;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::UncheckedInto, Pair, Public, H160, U256,OpaquePeerId};
+use sp_core::{crypto::UncheckedInto, OpaquePeerId, Pair, Public, H160, U256};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::{collections::BTreeMap, str::FromStr};
@@ -28,10 +22,7 @@ use std::{collections::BTreeMap, str::FromStr};
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig>;
 
 /// compose a session-key objects.
-fn session_keys(
-    aura: AuraId,
-    grandpa: GrandpaId,
-) -> SessionKeys {
+fn session_keys(aura: AuraId, grandpa: GrandpaId) -> SessionKeys {
     SessionKeys { aura, grandpa }
 }
 
@@ -54,10 +45,7 @@ where
 
 /// Generate an Aura GrandpaId authority key.
 pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-    (
-        get_from_seed::<AuraId>(s),
-        get_from_seed::<GrandpaId>(s)
-    )
+    (get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
 }
 
 pub fn development_config() -> Result<ChainSpec, String> {
@@ -73,13 +61,11 @@ pub fn development_config() -> Result<ChainSpec, String> {
             testnet_genesis(
                 wasm_binary,
                 // Initial PoA authorities
-                vec![
-                    (
-                        AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
-                        get_from_seed::<AuraId>("Alice"),
-                        get_from_seed::<GrandpaId>("Alice"),
-                    ),
-                ],
+                vec![(
+                    AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
+                    get_from_seed::<AuraId>("Alice"),
+                    get_from_seed::<GrandpaId>("Alice"),
+                )],
                 //vec![authority_keys_from_seed("Alice")],
                 // Sudo account
                 AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
@@ -92,7 +78,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
                     AccountId::from_str("0x3fcAA1E75397b4Ad18Be21036e6Cc28bC97F602A").unwrap(),
                     AccountId::from_str("0x5EF1068Db4e1e3CA3551a574aa1397d4dC4422bB").unwrap(),
                     AccountId::from_str("0xef11BbD0653255294eF8927b7fa15015d911Bba3").unwrap(),
-
                 ],
                 true,
             )
@@ -121,12 +106,10 @@ pub fn development_config() -> Result<ChainSpec, String> {
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
     let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
-    let (acc,au,gp): (AccountId, AuraId, GrandpaId) =(
+    let (acc, au, gp): (AccountId, AuraId, GrandpaId) = (
         AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
-        hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"]
-            .unchecked_into(),
-        hex!["8fcd4ac76751ca962f1fe92713c12710f4bdf9c23100baa0030b463aa6218fb8"]
-            .unchecked_into(),
+        hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"].unchecked_into(),
+        hex!["8fcd4ac76751ca962f1fe92713c12710f4bdf9c23100baa0030b463aa6218fb8"].unchecked_into(),
     );
 
     //let acc_58=bs58::encode(acc.as_ref()).into_string();
@@ -175,7 +158,6 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
                     AccountId::from_str("0x5f807d760E50fFedb492bcAA3220115d97D95AC6").unwrap(),
                     AccountId::from_str("0xc1432Db8842742937E8b27475C9a220e63C2cCaD").unwrap(),
                     AccountId::from_str("0x9f883b12fd0692714c2f28be6c40d3afdb9081d3").unwrap(),
-
                 ],
                 true,
             )
@@ -209,8 +191,8 @@ fn testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     _enable_println: bool,
 ) -> GenesisConfig {
-	let  num_endowed_accounts=endowed_accounts.len();
-	const STASH: Balance = 100 * DOLLARS;
+    let num_endowed_accounts = endowed_accounts.len();
+    const STASH: Balance = 100 * DOLLARS;
     GenesisConfig {
         system: SystemConfig {
             // Add Wasm runtime to storage.
@@ -226,21 +208,31 @@ fn testnet_genesis(
                 .collect(),
         },
         validator_set: ValidatorSetConfig {
-            validators: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+            validators: initial_authorities
+                .iter()
+                .map(|x| x.0.clone())
+                .collect::<Vec<_>>(),
         },
         session: SessionConfig {
-            keys: initial_authorities.iter().map(|x| {
-                (x.0.clone(), x.0.clone(), session_keys(x.1.clone(), x.2.clone()))
-            }).collect::<Vec<_>>(),
+            keys: initial_authorities
+                .iter()
+                .map(|x| {
+                    (
+                        x.0.clone(),
+                        x.0.clone(),
+                        session_keys(x.1.clone(), x.2.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
         },
-		elections: ElectionsConfig {
-			members: endowed_accounts
-				.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.map(|member| (member, STASH))
-				.collect(),
-		},
+        elections: ElectionsConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .map(|member| (member, STASH))
+                .collect(),
+        },
         aura: AuraConfig {
             authorities: vec![],
         },
@@ -251,16 +243,16 @@ fn testnet_genesis(
             // Assign network admin rights.
             key: root_key,
         },
-		technical_committee: TechnicalCommitteeConfig {
-			members: endowed_accounts
-				.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			phantom: Default::default(),
-		},
-		democracy: DemocracyConfig::default(),
-        council: CouncilConfig::default() ,
+        technical_committee: TechnicalCommitteeConfig {
+            members: endowed_accounts
+                .iter()
+                .take((num_endowed_accounts + 1) / 2)
+                .cloned()
+                .collect(),
+            phantom: Default::default(),
+        },
+        democracy: DemocracyConfig::default(),
+        council: CouncilConfig::default(),
         treasury: Default::default(),
         evm: EVMConfig {
             accounts: {
@@ -314,15 +306,14 @@ fn testnet_genesis(
     }
 }
 
-
 #[cfg(test)]
-mod tests{
+mod tests {
 
     use super::*;
 
     #[test]
     fn hello_world_is_ok() {
-        let (acc,au,gp): (AccountId, AuraId, GrandpaId) =(
+        let (acc, au, gp): (AccountId, AuraId, GrandpaId) = (
             AccountId::from_str("0x6Da573EEc80f63c98b88cED15D32CA270787FB5a").unwrap(),
             hex!["708e2d070222049c6684ce608845d6c28168aa45946593d9a0ce69d3d6c9be56"]
                 .unchecked_into(),
@@ -330,12 +321,9 @@ mod tests{
                 .unchecked_into(),
         );
 
-        let acc_58=bs58::encode(acc.as_ref()).into_string();
-        let auro_58=bs58::encode(au.as_ref()).into_string();
-        let gp_58=bs58::encode(gp.as_ref()).into_string();
-        println!("accid:{},auro:{},gran:{}",acc_58,auro_58,gp_58)
+        let acc_58 = bs58::encode(acc.as_ref()).into_string();
+        let auro_58 = bs58::encode(au.as_ref()).into_string();
+        let gp_58 = bs58::encode(gp.as_ref()).into_string();
+        println!("accid:{},auro:{},gran:{}", acc_58, auro_58, gp_58)
     }
-
-
-
 }

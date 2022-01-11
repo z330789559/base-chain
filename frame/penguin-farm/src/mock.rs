@@ -3,12 +3,12 @@
 #![cfg(test)]
 
 use super::*;
-use frame_support::{construct_runtime, parameter_types, PalletId, ord_parameter_types};
+use frame_support::{construct_runtime, ord_parameter_types, parameter_types, PalletId};
+use frame_system::{self as system, EnsureOneOf, EnsureRoot, EnsureSignedBy};
 use primitive::*;
 use sp_core::H256;
+use sp_runtime::Permill;
 use sp_runtime::{testing::Header, traits::IdentityLookup};
-use frame_system::{self as system, EnsureOneOf, EnsureRoot,EnsureSignedBy};
-use sp_runtime::{ Permill};
 
 use crate as penguin_farm;
 
@@ -71,7 +71,7 @@ parameter_types! {
     pub const BidMaxPeriod: BlockNumber = 3 * MINUTES;
 }
 
-impl penguin_farm::Config  for Runtime {
+impl penguin_farm::Config for Runtime {
     type Event = Event;
     type Call = Call;
     type PalletsOrigin = OriginCaller;
@@ -106,7 +106,7 @@ impl penguin_farm::Config  for Runtime {
     type BidMaxPeriod = BidMaxPeriod;
     type WeightInfo = ();
     type Randomness = RandomnessCollectiveFlip;
-    type Schedule =Scheduler;
+    type Schedule = Scheduler;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -118,9 +118,9 @@ parameter_types! {
     pub const MaxLocks: u32 = 50;
 
       // 佣金标识
-	pub const CommissionStorage: PalletId = PalletId(*b"ccm/cosm");
-	// 佣金率
-	pub const CommissionRate: Permill =Permill::from_percent(10);
+    pub const CommissionStorage: PalletId = PalletId(*b"ccm/cosm");
+    // 佣金率
+    pub const CommissionRate: Permill =Permill::from_percent(10);
 }
 
 impl pallet_balances::Config for Runtime {
@@ -158,11 +158,11 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-		pub MaximumSchedulerWeight: Weight = 100; //Perbill::from_percent(80) * BlockWeights::get().max_block;
-		pub const MaxScheduledPerBlock: u32 = 10;
-	}
+    pub MaximumSchedulerWeight: Weight = 100; //Perbill::from_percent(80) * BlockWeights::get().max_block;
+    pub const MaxScheduledPerBlock: u32 = 10;
+}
 ord_parameter_types! {
-		pub const One: u64 = 1;
+        pub const One: u64 = 1;
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -171,18 +171,17 @@ impl pallet_scheduler::Config for Runtime {
     type PalletsOrigin = OriginCaller;
     type Call = Call;
     type MaximumWeight = MaximumSchedulerWeight;
-    type ScheduleOrigin = EnsureRoot<AccountId>;//EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureSignedBy<One, AccountId>>; //EnsureRoot<AccountId>;
+    type ScheduleOrigin = EnsureRoot<AccountId>; //EnsureOneOf<AccountId, EnsureRoot<AccountId>, EnsureSignedBy<One, AccountId>>; //EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = (); //pallet_scheduler::weights::SubstrateWeight<Runtime>;
 }
 
-
 parameter_types! {
-	pub const AssetDeposit: u64 = 1;
-	pub const ApprovalDeposit: u64 = 1;
-	pub const StringLimit: u32 = 50;
-	pub const MetadataDepositBase: u64 = 1;
-	pub const MetadataDepositPerByte: u64 = 1;
+    pub const AssetDeposit: u64 = 1;
+    pub const ApprovalDeposit: u64 = 1;
+    pub const StringLimit: u32 = 50;
+    pub const MetadataDepositBase: u64 = 1;
+    pub const MetadataDepositPerByte: u64 = 1;
 }
 
 impl pallet_assets::Config for Runtime {
@@ -198,14 +197,13 @@ impl pallet_assets::Config for Runtime {
     type StringLimit = StringLimit;
     type Freezer = ();
     type Extra = ();
-    type WeightInfo = ();//pallet_assets::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = (); //pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
 }
-
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -260,7 +258,9 @@ impl ExtBuilder {
 
     // Build test environment by setting the root `key` for the Genesis.
     pub fn new_test_ext(self, root_key: u64) -> sp_io::TestExternalities {
-        let mut stro = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+        let mut stro = frame_system::GenesisConfig::default()
+            .build_storage::<Runtime>()
+            .unwrap();
         pallet_sudo::GenesisConfig::<Runtime> { key: root_key }
             .assimilate_storage(&mut stro)
             .unwrap();

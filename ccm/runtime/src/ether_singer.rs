@@ -1,7 +1,10 @@
 use codec::{Decode, Encode};
 use frame_support::log;
 use sha3::{Digest, Keccak256};
-use sp_core::{ecdsa, H160, H256, crypto::{CryptoTypePublicPair,Public as TraitPublic,}};
+use sp_core::{
+    crypto::{CryptoTypePublicPair, Public as TraitPublic},
+    ecdsa, H160, H256,
+};
 
 #[cfg(feature = "std")]
 pub use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -43,16 +46,7 @@ impl sp_runtime::traits::Verify for EthereumSignature {
 }
 
 /// Public key for an Ethereum / H160 compatible account
-#[derive(
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Clone,
-    Encode,
-    Decode,
-    sp_core::RuntimeDebug,
-)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Encode, Decode, sp_core::RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct EthereumSigner([u8; 20]);
 
@@ -83,7 +77,6 @@ impl std::fmt::Display for EthereumSigner {
         write!(fmt, "ethereum signature: {:?}", H160::from_slice(&self.0))
     }
 }
-
 
 /*impl TraitPublic for EthereumSigner {
     /// A new instance from the given slice that should be 32 bytes long.

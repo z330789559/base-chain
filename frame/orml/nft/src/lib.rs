@@ -41,7 +41,6 @@ use sp_std::vec::Vec;
 mod mock;
 mod tests;
 
-
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CollectionType {
