@@ -1,0 +1,76 @@
+# ccm ccm-chain
+# docker-compose -p ccm-chain up -d --build
+# docker-compose  -p ccm-chain up --build -d node1
+
+version: '3'
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: nginx-reverxy
+    hostname: nginx-reverxy
+    ports:
+      - "9933:80"
+      - "9954:81"
+    restart: on-failure:5
+
+  node1:
+    build:
+      context: .
+      dockerfile: Dockerfile.node1
+    container_name: node1
+    hostname: node1
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      DEBIAN_FRONTEND: noninteractive
+      RUST_MIN_STACK: 536870912
+    volumes:
+        - ~/ccm/run/value:/ccm/run/data/
+        - ~/ccm/run/node1/logs:/ccm/run/logs
+
+  node2:
+    build:
+      context: .
+      dockerfile: Dockerfile.node2
+    container_name: node2
+    hostname: node2
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      DEBIAN_FRONTEND: noninteractive
+      RUST_MIN_STACK: 536870912
+    volumes:
+      - ~/ccm/run/value:/ccm/run/data
+      - ~/ccm/run/node2/logs:/ccm/run/logs
+
+  node3:
+    build:
+      context: .
+      dockerfile: Dockerfile.node3
+    container_name: node3
+    hostname: node3
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      DEBIAN_FRONTEND: noninteractive
+      RUST_MIN_STACK: 536870912
+    volumes:
+      - ~/ccm/run/value:/ccm/run/data
+      - ~/ccm/run/node3/logs:/ccm/run/logs
+
+  node4:
+    build:
+      context: .
+      dockerfile: Dockerfile.node4
+    container_name: node4
+    hostname: node4
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+      DEBIAN_FRONTEND: noninteractive
+      RUST_MIN_STACK: 536870912
+    volumes:
+      - ~/ccm/run/value:/ccm/run/data
+      - ~/ccm/run/node4/logs:/ccm/run/logs

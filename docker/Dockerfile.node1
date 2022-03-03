@@ -4,9 +4,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV RUST_MIN_STACK=536870912
 
 RUN apt-get update && \
-    apt-get install -yq tzdata && \
-    ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+    apt-get install -yq ca-certificates && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 VOLUME /ccm
 WORKDIR /ccm
@@ -14,9 +13,9 @@ COPY ccm-node /ccm/run/
 
 COPY node1.sh /ccm/run/
 
-RUN ls /ccm/run && chmod +x /ccm/run/node1.sh
+RUN chmod +x /ccm/run/node1.sh
 
-ENTRYPOINT ["/ccm/run/node1.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "/ccm/run/node1.sh"]
 
 
 # docker build -t ccm-node:test -f ./Dockerfile .

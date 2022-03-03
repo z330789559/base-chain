@@ -1,0 +1,8 @@
+FROM nginx
+
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+&& echo "Asia/Shanghai" > /etc/timezone \
+EXPOSE 80 81
+COPY default.conf /etc/nginx/conf.d/
+COPY ./nginx.html /usr/share/nginx/html/
+ENTRYPOINT nginx -g "daemon off;"

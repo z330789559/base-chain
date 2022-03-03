@@ -1,0 +1,69 @@
+FROM ubuntu:20.04
+ENV TZ=Asia/Shanghai
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RUST_MIN_STACK=536870912
+
+COPY ./sources.list /etc/apt/sources.list
+
+RUN apt-get update && \
+    apt-get install -yq tzdata git clang curl libssl-dev llvm libudev-dev && \
+    ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+
+#RUN echo -e "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted universe multiverse \ndeb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted universe multiverse \ndeb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted universe multiverse" | tee -a /etc/apt/sources.list.d/ddebs.list
+#ubuntu-dbgsym-keyring debian-goodies
+#RUN apt-get update && \
+#    apt-get install -yq git clang curl libssl-dev llvm libudev-dev \
+
+#RUN apt-get clean && \
+#    rm -rf /var/cache/apk/* \
+
+RUN curl https://sh.rustup.rs -sSf | sh
+RUN source ~/.cargo/env
+RUN rustup default stable && \
+    rustup update && \
+    rustup update nightly && \
+    rustup target add wasm32-unknown-unknown --toolchain nightly
+
+#ARG DEBIAN_FRONTEND=noninteractive
+#ENV TZ=Asia/Shanghai
+#ENV LANG=C.UTF-8
+#
+## Install build dependencies
+#RUN apt-get update -y \
+#    && apt-get install -y automake \
+#    build-essential \
+#    apt-utils \
+#    curl \
+#    && apt-get clean \
+#RUN #git config --global url."https://github.com.cnpmjs.org/".insteadOf https://github.com/
+#RUN curl https://getsubstrate.io -sSf | bash -s -- --fast
+#RUN mkdir -p /root/setup
+#WORKDIR /root/setup
+#ENV PATH=/root/.cargo/bin:$PATH
+#RUN cargo --version
+#RUN rustup update nightly & \
+#    rustup update stable &\
+#    rustup target add wasm32-unknown-unknown --toolchain nightly
+VOLUME /apps
+WORKDIR /apps
+COPY ../ .
+RUN RUSTFLAGS='--cfg ccmtest -g' cargo build --release && mkdir -p ./run && cp ./target/release/ccm-node ./run
+
+COPY entrypoint.sh .
+
+RUN chmod +x entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
+
+
+# docker build -t ccm-node:test -f ./Dockerfile .
+# docker run -tid --restart=always --name chain-monitor:prod -v ~/logs:/root/logs -p 6081:6081 chain-monitor:prod
+
+
+
+
+
+
+
+
