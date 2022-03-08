@@ -11,7 +11,7 @@ echo `date +"%Y-%m-%d %H:%M:%S.%z"`
 nohup ./run/ccm-node \
 --chain=local \
 --base-path ./run/data/node4 \
---name alice \
+--name node4 \
 --node-key=a99331ff4f0e0a0434a6263da0a5823ea3afcfffe590c9f3014e6cf620f2b19a \
 --port 30333 \
 --ws-port 9944 \

@@ -10,7 +10,7 @@ echo "start run node3" `date +"%Y-%m-%d %H:%M:%S.%z"`
 nohup ./run/ccm-node \
 --chain=local \
 --base-path ./run/data/node3 \
---name alice \
+--name node3 \
 --node-key=3a9d5b35b9fb4c42aafadeca046f6bf56107bd2579687f069b42646684b94d9e \
 --port 30333 \
 --ws-port 9944 \
